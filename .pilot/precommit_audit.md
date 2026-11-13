@@ -1,3 +1,15 @@
+# precommit audit（2026-11-13 run_branch.py：逢低訊號加分點買方集中度）
+- 變更範圍：run_branch.py（新）、tests（多 1 個，共 14 個）。沒有改到既有程式。
+- 呼叫鏈：run_branch.validation_trades → prep.load_all → backtest.simulate（和回測同一個 bias_dip 60 / 0.15）；do_fetch → window_of → branch_url → GentleFetcher（big5、三個來源輪流）→ data/branch/signal_pages.json；analyse → fubon_parse.parse_summary → concentration → backtest.stats → run_backtest.baseline / nearest。
+- 資料鏈檢查：
+  - ✔ 不偷看未來：分點視窗的最後一天是訊號日（進場日的前一個交易日），不含進場日（測試驗證）。
+  - ✔ 指標在抓資料前就定好一個（買超前 15 名合計 ÷ 買賣超前 15 名合計），腳本與報告都寫明，沒有事後挑。
+  - ✔ 可行性：指定過去日期區間的排行頁實測抓得到（4931 的 2026-07 與 2024-08 各一頁，買賣各 15 名）。
+  - ✔ 錯誤路徑：某個來源被拒絕就停用它、三個都被拒絕才停；單頁失敗跳過；索引每 25 頁存一次，可接續。
+  - ⚠ 賣超合計在 parse_summary 裡是負數，concentration 取負號變正；買賣都 0 時回 None 不分組（測試驗證）。
+- 驗證：tests 14 個全過。
+- 未驗證：analyse 還沒有資料可跑（522 頁抓取中）。
+
 # precommit audit（2026-11-13 每天結算的投組、0050 搭配、法人資料抓取、籌碼條件腳本）
 - 變更範圍：twstock_lab/portfolio.py（新：daily_equity、summary）、run_portfolio.py（新）、run_chips.py（新，還沒有資料可跑）、twstock_lab/fetch.py（fetch_dataset、--dataset）、tests（多 3 個）、reports/PORTFOLIO.md 與 portfolio.csv。
 - 呼叫鏈：run_portfolio.run → prep.load_all → backtest.simulate（交易清單與回測相同）→ portfolio.daily_equity → summary。run_chips.run → load_flows（FinMind 法人買賣超）→ filters → backtest.simulate（進場訊號 & 籌碼條件）→ run_backtest.baseline / nearest（對照組沿用回測的）。

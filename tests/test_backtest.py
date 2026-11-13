@@ -116,6 +116,18 @@ class DailyPortfolio(unittest.TestCase):
             pf.daily_equity({"X": df}, trades, sleeve=0.5)
 
 
+class BranchConcentration(unittest.TestCase):
+    def test_ratio_and_signal_window(self):
+        import run_branch
+        self.assertAlmostEqual(run_branch.concentration([{"net": 300.0}, {"net": 100.0}], [{"net": -100.0}]), 0.8)
+        self.assertIsNone(run_branch.concentration([], []), "沒有買賣超資料就不分組")
+        df = frame([100.0] * 10)
+        start, end = run_branch.window_of(df, df.index[7])
+        self.assertEqual((start, end), (df.index[2], df.index[6]), "訊號日是進場日的前一個交易日，往前共 5 個交易日，不含進場日")
+        url = run_branch.branch_url("4931", pd.Timestamp("2024-08-01"), pd.Timestamp("2024-08-05"), "example.com")
+        self.assertTrue(url.endswith("a=4931&e=2024-8-1&f=2024-8-5"))
+
+
 class NoLookAhead(unittest.TestCase):
     def test_signals_do_not_change_when_future_rows_are_appended(self):
         """每個策略：只給前 300 天算出來的訊號，要和給全部 400 天再取前 300 天的一模一樣。"""

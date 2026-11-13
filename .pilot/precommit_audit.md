@@ -1,3 +1,14 @@
+# precommit audit（2026-11-13 theme_screen.py：題材名單初篩）
+- 變更範圍：theme_screen.py（新）。沒有改到既有程式。
+- 呼叫鏈：theme_screen.main → screen_one → stock_check.find_stock / exdiv_events / FINMIND 網址（和個股體檢同一組，快取共用）→ prep.load_prices / adjust → strategies.sma / prior_high / bollinger_dip。
+- 資料鏈檢查：
+  - ✔ 六項起漲條件都只用當天收盤以前的資料；「創 20 日新高」用 prior_high（先 shift(1)）。
+  - ✔ 兩個逢低條件和回測、個股體檢同一個函式與參數（bollinger_dip 20/2.0/120；60 日乖離 < −15%）。
+  - ✔ 錯誤路徑：名稱對不到、FinMind 額度用完（402）都只略過那一檔並印在 stderr，其他照跑（實跑時 3583 因額度用完被略過）。
+  - ⚠ 起漲分數不是回測驗證過的買點（順勢訊號逐年不穩定），腳本開頭的說明與輸出欄位名稱都只叫「分數」，沒有叫「買進訊號」。
+- 驗證：對 20 檔中介層相關個股實跑，19 檔有結果；tests 10 個全過（既有程式沒動）。
+- 未驗證：theme_screen.py 沒有自己的單元測試。
+
 # precommit audit（2026-11-13 補齊十種常見技術方法：乖離率、K 線型態、DMI）
 - 變更範圍：twstock_lab/strategies.py（bias_dip、candle、dmi_cross 三個函式與 CATALOG 三筆）、run_backtest.py（報告裡的策略種數改成實際數字）、stock_check.py（多印 60 日乖離率與乖離率條件）、reports/ 兩輪結果重產（60 → 87 個組合）。
 - 資料鏈檢查：

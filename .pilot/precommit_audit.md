@@ -1,3 +1,13 @@
+# precommit audit（2026-11-13 補齊十種常見技術方法：乖離率、K 線型態、DMI）
+- 變更範圍：twstock_lab/strategies.py（bias_dip、candle、dmi_cross 三個函式與 CATALOG 三筆）、run_backtest.py（報告裡的策略種數改成實際數字）、stock_check.py（多印 60 日乖離率與乖離率條件）、reports/ 兩輪結果重產（60 → 87 個組合）。
+- 資料鏈檢查：
+  - ✔ 不偷看未來：tests 的 NoLookAhead 會自動跑 CATALOG 裡每一個策略與每組參數，新增的 9 組都通過（K 線型態的固定持有天數用 entry.shift(hold)，只往後移）。
+  - ✔ 原有 60 個組合的數字和上一版相同（只多了新策略的列）。
+  - ✔ DMI 用 Wilder 平滑（ewm alpha = 1/n），和 RSI 同一種算法。
+  - ⚠ 乖離率（60 日線下 15%）不停損的結果要連風險一起看：驗證期 522 筆裡 86 筆到資料結束還沒出場（用最後收盤價結算）、22 筆賠超過 20%、最長抱 186 天、六成的進場集中在 4 個大跌的月份。已寫進 stock_check 的輸出與全域技能的回報規則。
+- 驗證：tests 10 個全過；兩輪回測各 87 個組合跑完；stock_check 對 4931、2495 實跑。
+- 未驗證：K 線型態只做了多頭吞噬與錘子兩種，定義是我選的常見版本，不同看盤軟體的定義有出入。
+
 # precommit audit（2026-11-13 stock_check.py 加季財報與本益比）
 - 變更範圍：stock_check.py 多一段「季財報與評價」（FinMind TaiwanStockFinancialStatements、TaiwanStockPER）。回測程式沒動。
 - 資料鏈檢查：

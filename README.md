@@ -35,7 +35,7 @@ python stock_check.py 2495      # 或 python stock_check.py 普安
 |---|---|
 | `twstock_lab/fetch.py` | 選股票範圍（成交值前 150 檔上市櫃普通股）、抓日線與除權息資料 |
 | `twstock_lab/prep.py` | 把原始資料整理成日線表，用除權息參考價還原股價 |
-| `twstock_lab/strategies.py` | 技術指標與 9 種策略（均線交叉、通道突破、帶量突破、RSI 拉回、KD、MACD、布林下軌、布林突破、均線拉回） |
+| `twstock_lab/strategies.py` | 技術指標與 12 種策略（均線交叉、通道突破、帶量突破、RSI 拉回、KD、MACD、布林下軌、布林突破、均線拉回、乖離率、K 線型態、DMI） |
 | `twstock_lab/backtest.py` | 回測引擎：隔天開盤成交、手續費、證交稅、滑價、漲跌停、停損、統計 |
 | `run_backtest.py` | 跑全部組合，切成挑選期與驗證期，和對照組比較，寫報告 |
 | `tests/test_backtest.py` | 引擎、還原股價、「策略不偷看未來」的測試 |

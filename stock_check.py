@@ -88,6 +88,9 @@ def check(key: str) -> None:
     above = bool(c.iloc[-1] > st.sma(c, 120).iloc[-1])
     print(f"\n## 回測驗證過的進場條件（布林下軌反彈：收盤在 120 日線之上且跌破下軌）")
     print(f"今天有訊號：{'有' if entry.iloc[-1] else '沒有'}｜收盤在 120 日線之上：{'是' if above else '否'}｜最近一次訊號日 {entry[entry].index[-1].date() if entry.any() else '無'}")
+    bias60 = c.iloc[-1] / st.sma(c, 60).iloc[-1] - 1
+    print(f"60 日乖離率 {100 * bias60:+.1f}%｜乖離率搶反彈條件（低於 60 日線 15% 以上）：{'成立' if bias60 < -0.15 else '不成立'}"
+          "（回測勝率約 75%，但訊號集中在大盤急跌時、不停損、約 4% 的交易賠超過 20%）")
     trades = bt.simulate(code, df, entry, exit_)
     print(f"這檔自己的歷史（樣本少，僅供參考）：{bt.stats(trades)}")
     for t in trades[-5:]:

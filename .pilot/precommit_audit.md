@@ -1,3 +1,12 @@
+# precommit audit（2026-11-13 分點集中度回測結果：reports/BRANCH.md、branch.csv）
+- 變更範圍：只新增兩個報告檔，程式沒有改。
+- 資料鏈檢查：
+  - ✔ 522 / 522 筆驗證期交易都抓到分點頁、都解析得出集中度；「全部」那一列（74.7%、+8.54%、贏對照 4.51）和 REPORT_asof.md 的同一策略數字一致，代表交易集合沒有走樣。
+  - ✔ 分組門檻（0.5、三等分）是抓資料前寫在程式裡的，沒有看了結果再調。
+  - ⚠ 買方集中（> 0.5）只有 87 筆；各組差距 1～3 個百分點，訊號又集中在少數大跌月份，差距可能只是運氣，報告的限制段有寫。
+- 驗證：tests 14 個全過；python run_branch.py 可重跑（只讀快取）。
+- 未驗證：沒有做統計檢定；只測一個指標、一個策略、一段期間。
+
 # precommit audit（2026-11-13 run_branch.py：逢低訊號加分點買方集中度）
 - 變更範圍：run_branch.py（新）、tests（多 1 個，共 14 個）。沒有改到既有程式。
 - 呼叫鏈：run_branch.validation_trades → prep.load_all → backtest.simulate（和回測同一個 bias_dip 60 / 0.15）；do_fetch → window_of → branch_url → GentleFetcher（big5、三個來源輪流）→ data/branch/signal_pages.json；analyse → fubon_parse.parse_summary → concentration → backtest.stats → run_backtest.baseline / nearest。

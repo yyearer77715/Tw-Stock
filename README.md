@@ -23,6 +23,8 @@ python -m unittest discover -s tests
 python stock_check.py 2495      # 或 python stock_check.py 普安
 ```
 
+這支體檢也包成記憶中樞的全域技能 `tw-stock-check`，任何專案的 session 都能用。改了 `stock_check.py` 或 `twstock_lab/` 之後跑 `bash export_skill.sh` 把程式複製過去，再 `hub_cli.py sync`。資料位置可用環境變數 `TWSTOCK_DATA_DIR` 指定（預設是本專案的 `data/`）。
+
 結果在 `reports/REPORT.md`（摘要）與 `reports/results.csv`（全部組合）。
 
 抓資料用的是記憶中樞的 `gentle-fetch` 技能（`~/.claude/ai-memory-hub/skills/gentle-fetch/scripts/gentle_fetch.py`）；放在別處時設定環境變數 `GENTLE_FETCH_DIR`。

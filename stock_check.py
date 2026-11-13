@@ -125,7 +125,7 @@ def check(key: str) -> None:
     print(text + (f"｜融資占股本 {100 * bal.iloc[-1] * 1000 / shares:.1f}%" if shares else ""))
 
     # ---------- 分點 ----------
-    bf = fetch.GentleFetcher(str(fetch.ROOT / "data" / "branch" / "cache"), encoding="big5")
+    bf = fetch.GentleFetcher(str(fetch.DATA / "branch" / "cache"), encoding="big5")
     print("\n## 分點買賣超排行（張；買超 / 賣超各列前 8 名）")
     for i, (n, label) in enumerate(BRANCH_PERIODS.items()):
         try:

@@ -24,7 +24,9 @@ except ImportError as error:  # pragma: no cover
     raise SystemExit(f"找不到 gentle_fetch.py（{GENTLE_DIR}）。請設定環境變數 GENTLE_FETCH_DIR 指到 gentle-fetch 技能的 scripts 資料夾。") from error
 
 ROOT = Path(__file__).resolve().parent.parent
-CACHE = ROOT / "data" / "cache"
+# 資料與快取放哪裡：預設專案的 data/；當成全域技能使用時由環境變數 TWSTOCK_DATA_DIR 指到別處，不要寫進技能資料夾
+DATA = Path(os.environ.get("TWSTOCK_DATA_DIR") or ROOT / "data")
+CACHE = DATA / "cache"
 BENCHMARK = "0050"
 
 TWSE_ALL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
@@ -105,7 +107,7 @@ def fetch_all(top: int = 150, years: int = 8, asof: date | None = None) -> Dict[
     today = date.today()
     start = f"{today.year - years}-{today.month:02d}-01"
     stocks = universe_asof(f, asof, top) if asof else universe(f, top)
-    out_file = ROOT / "data" / ("manifest_asof.json" if asof else "manifest.json")
+    out_file = DATA / ("manifest_asof.json" if asof else "manifest.json")
     manifest: Dict[str, object] = {"fetched": today.isoformat(), "start": start, "stocks": stocks,
                                    "universe_date": (asof or today).isoformat(),
                                    "prices": {}, "exdiv": {"twse": [], "tpex": []}, "failed": []}

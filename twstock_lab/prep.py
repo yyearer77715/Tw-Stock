@@ -17,7 +17,7 @@ Event = Tuple[pd.Timestamp, float]  # (除權息日, 還原係數 = 參考價 / 
 
 
 def load_manifest(name: str = "manifest.json") -> Dict[str, object]:
-    return json.loads((fetch.ROOT / "data" / name).read_text(encoding="utf-8"))
+    return json.loads((fetch.DATA / name).read_text(encoding="utf-8"))
 
 
 def roc_date(text: str) -> pd.Timestamp:
@@ -87,4 +87,4 @@ def load_all(manifest: Dict[str, object] | None = None) -> Tuple[Dict[str, pd.Da
 
 
 def data_dir() -> Path:
-    return fetch.ROOT / "data"
+    return fetch.DATA

@@ -1,3 +1,11 @@
+# precommit audit（2026-11-13 資料位置可指定 + 匯出成全域技能 tw-stock-check）
+- 變更範圍：twstock_lab/fetch.py（DATA 可由環境變數 TWSTOCK_DATA_DIR 指定，CACHE 與 manifest 都跟著它）、prep.py（load_manifest / data_dir 改用 fetch.DATA）、stock_check.py（分點快取改用 fetch.DATA）、export_skill.sh（新）、README。
+- 資料鏈：沒設環境變數時 DATA = 專案的 data/，路徑與之前完全相同（回測重跑結果一致）；全域技能的入口 check.py 把它設成 ~/.claude-max-pilot/data/tw_stock，快取不會寫進技能資料夾、也就不會被記憶中樞同步出去。
+  - ✔ 專案裡已經沒有任何寫死的 ROOT / "data"（Grep 確認只剩 DATA 的定義那一行）。
+  - ✔ export_skill.sh 只複製 stock_check.py 與 twstock_lab 的五個檔，不帶資料、報告、測試。
+- 驗證：tests 10 個全過；run_backtest --asof 重跑成功；從 /tmp 用全域技能的指令實跑 2330，六段輸出正常，資料落在 ~/.claude-max-pilot/data/tw_stock，技能資料夾裡沒有多出資料檔。
+- 未驗證：Windows 電腦上的實跑（路徑用 Path.home()，理論上相同）。
+
 # precommit audit（2026-11-13 stock_check.py：單一個股體檢）
 - 變更範圍：stock_check.py（新）、twstock_lab/backtest.py（stats 的數字轉成一般 float，只影響顯示）。
 - 呼叫鏈：stock_check.check → find_stock（證交所 / 櫃買清單）→ prep.load_prices / adjust（沿用回測的還原）→ strategies.bollinger_dip → backtest.simulate / stats / buy_and_hold；finmind（月營收、法人、融資）；記憶中樞 tw-branch-chips 的 fubon_parse.parse_summary（分點排行）。沒有改到回測流程。

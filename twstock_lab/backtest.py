@@ -119,4 +119,4 @@ def buy_and_hold(df: pd.DataFrame, start: pd.Timestamp, end: pd.Timestamp) -> Di
     total = part.iloc[-1] * (1 - FEE - TAX) / (part.iloc[0] * (1 + FEE))
     years = max((part.index[-1] - part.index[0]).days / 365.25, 1e-9)
     drawdown = float((part / part.cummax() - 1).min())
-    return {"年化%": round(100 * (total ** (1 / years) - 1), 1), "最大回落%": round(100 * drawdown, 1)}
+    return {"年化%": round(float(100 * (total ** (1 / years) - 1)), 1), "最大回落%": round(100 * drawdown, 1)}

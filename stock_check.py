@@ -1,6 +1,6 @@
 """單一個股體檢（0 token，本機腳本）：python stock_check.py <代號或名稱>
 
-抓日線、月營收、三大法人、融資、分點買賣超排行，印出技術面 / 基本面 / 籌碼面的數字，
+抓日線、月營收、季財報、本益比、三大法人、融資、分點買賣超排行，印出技術面 / 基本面 / 籌碼面的數字，
 並檢查回測驗證過的「布林下軌反彈」進場條件。抓取一律走 gentle-fetch（有快取，同一天重跑不重抓）。
 分點來源是富邦 / 元大 / MoneyDJ 的公開頁面（2026-11-13 交叉驗證三者一致）。
 """
@@ -107,6 +107,28 @@ def check(key: str) -> None:
     prev = r[[i - 100 for i in this.index if i - 100 in r.index]]
     if len(prev) == len(this):
         print(f"{year} 年前 {len(this)} 月累計 {this.sum():.1f} 億，去年同期 {prev.sum():.1f} 億，年增 {100 * (this.sum() / prev.sum() - 1):+.0f}%｜近 {len(r)} 個月最高單月 {r.max():.2f}（{int(r.idxmax())}）")
+
+    # ---------- 季財報與評價 ----------
+    fin = pd.DataFrame(finmind(f, "TaiwanStockFinancialStatements", code, f"{today.year - 3}-01-01"))
+    q = fin.pivot_table(index="date", columns="type", values="value", aggfunc="last").sort_index()
+    print("\n## 季財報（單季）")
+    print("  季度　　　營收(億)　毛利率　營益率　業外(億)　稅後淨利(億)　每股盈餘")
+    for day, row in q.tail(8).iterrows():
+        revenue = row.get("Revenue", float("nan"))
+        print(f"  {day}　{revenue / 1e8:7.2f}　{100 * row.get('GrossProfit', float('nan')) / revenue:5.1f}%　"
+              f"{100 * row.get('OperatingIncome', float('nan')) / revenue:5.1f}%　{row.get('TotalNonoperatingIncomeAndExpense', float('nan')) / 1e8:6.2f}　"
+              f"{row.get('IncomeAfterTaxes', float('nan')) / 1e8:8.2f}　{row.get('EPS', float('nan')):8.2f}")
+    if "EPS" in q and len(q) >= 8:
+        ttm, prev_ttm = q["EPS"].tail(4).sum(), q["EPS"].iloc[-8:-4].sum()
+        growth = f"，比前四季的 {prev_ttm:.2f} 元{'成長' if ttm >= prev_ttm else '衰退'} {abs(100 * (ttm / prev_ttm - 1)):.0f}%" if prev_ttm > 0 else ""
+        print(f"近四季每股盈餘合計 {ttm:.2f} 元{growth}｜以收盤 {raw['close'].iloc[-1]} 元算，本益比 {raw['close'].iloc[-1] / ttm:.1f} 倍" if ttm > 0
+              else f"近四季每股盈餘合計 {ttm:.2f} 元（虧損，本益比沒有意義）")
+    per = pd.DataFrame(finmind(f, "TaiwanStockPER", code, f"{today.year - 3}-{today.month:02d}-01"))
+    if len(per):
+        valid = per[per["PER"] > 0]["PER"]
+        now = per.iloc[-1]
+        print(f"官方本益比 {now['PER']}、股價淨值比 {now['PBR']}、殖利率 {now['dividend_yield']}%" +
+              (f"｜近三年本益比區間 {valid.min():.1f}～{valid.max():.1f}、中位數 {valid.median():.1f}，目前高於其中 {100 * (valid < now['PER']).mean():.0f}% 的日子" if len(valid) > 60 and now["PER"] > 0 else ""))
 
     # ---------- 法人與融資 ----------
     start = (pd.Timestamp(today) - pd.Timedelta(days=200)).strftime("%Y-%m-%d")

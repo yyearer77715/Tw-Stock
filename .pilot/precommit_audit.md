@@ -1,3 +1,14 @@
+# precommit audit（2026-11-13 stock_check.py 加季財報與本益比）
+- 變更範圍：stock_check.py 多一段「季財報與評價」（FinMind TaiwanStockFinancialStatements、TaiwanStockPER）。回測程式沒動。
+- 資料鏈檢查：
+  - ✔ 單季還是累計：新盛力 2026Q3 財報營收 13.69 億 = 7～9 月月營收 4.49 + 4.95 + 4.25，確認是單季數字，近四季每股盈餘可以直接相加。
+  - ✔ 自己算的本益比（收盤 ÷ 近四季每股盈餘）和官方資料集一致：新盛力 23.0 / 23.01、普安 14.8 / 14.77。
+  - ✔ 單位：金額換成億元；毛利率、營益率 = 毛利 / 營業利益 ÷ 營收。
+  - ✔ 錯誤路徑：近四季虧損時不印本益比；財報不足 8 季不算成長率；本益比資料少於 60 天不算區間。
+  - 加一欄業外損益：普安 2025Q2、Q3 的淨利主要來自業外（-1.92 億、+2.17 億），只看每股盈餘會誤判本業。
+- 驗證：tests 10 個全過；新盛力、普安實跑。
+- 未驗證：金融股、虧損股的財報欄位名稱可能不同（沒有 GrossProfit 時會印 nan，不會當掉）。
+
 # precommit audit（2026-11-13 資料位置可指定 + 匯出成全域技能 tw-stock-check）
 - 變更範圍：twstock_lab/fetch.py（DATA 可由環境變數 TWSTOCK_DATA_DIR 指定，CACHE 與 manifest 都跟著它）、prep.py（load_manifest / data_dir 改用 fetch.DATA）、stock_check.py（分點快取改用 fetch.DATA）、export_skill.sh（新）、README。
 - 資料鏈：沒設環境變數時 DATA = 專案的 data/，路徑與之前完全相同（回測重跑結果一致）；全域技能的入口 check.py 把它設成 ~/.claude-max-pilot/data/tw_stock，快取不會寫進技能資料夾、也就不會被記憶中樞同步出去。

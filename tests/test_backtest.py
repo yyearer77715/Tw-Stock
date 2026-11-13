@@ -8,6 +8,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from twstock_lab import backtest as bt  # noqa: E402
+from twstock_lab import portfolio as pf  # noqa: E402
 from twstock_lab import prep, strategies as st  # noqa: E402
 
 
@@ -80,6 +81,39 @@ class Engine(unittest.TestCase):
         self.assertAlmostEqual(s["獲利因子"], 12.0)
         p = bt.portfolio(trades, slots=2)
         self.assertEqual((p["成交筆數"], p["略過筆數"]), (2, 1), "只有 2 個空位，第三筆同一天的訊號進不去")
+
+
+class DailyPortfolio(unittest.TestCase):
+    def one_trade(self, closes):
+        df = frame(closes, closes)
+        entry, exit_ = flags(len(closes), 0).set_axis(df.index), flags(len(closes), len(closes) - 3).set_axis(df.index)
+        return df, bt.simulate("X", df, entry, exit_)
+
+    def test_drawdown_inside_a_trade_is_visible_daily(self):
+        """進場後中途跌三成又漲回來：只在出場時結算看不到回落，每天結算要看得到。"""
+        df, trades = self.one_trade([100, 100, 70, 70, 100, 100, 100])
+        curve = pf.daily_equity({"X": df}, trades, slots=1)
+        self.assertLess(pf.summary(curve)["最大回落%"], -25)
+        self.assertGreater(bt.portfolio(trades, slots=1)["最大回落%"], -2, "舊算法只看到手續費那一點點")
+        self.assertAlmostEqual(curve["equity"].iloc[-1], 1 + trades[0].ret, places=9, msg="出場後的權益 = 這筆的淨報酬")
+
+    def test_slots_split_capital_and_idle_cash_stays_flat(self):
+        df, trades = self.one_trade([100, 100, 100, 110, 110, 110, 110])
+        curve = pf.daily_equity({"X": df}, trades, slots=4)
+        self.assertAlmostEqual(curve["equity"].iloc[-1], 1 + trades[0].ret / 4, places=9, msg="只用四分之一的資金")
+        self.assertLessEqual(curve["invested"].max(), 0.30)
+
+    def test_core_holding_and_rotation(self):
+        df, trades = self.one_trade([100] * 7)
+        core = frame([50, 50, 55, 55, 60, 60, 60], [50, 50, 55, 55, 60, 60, 60])
+        only_core = pf.daily_equity({"X": df}, [], core=core, sleeve=0.0)
+        self.assertAlmostEqual(only_core["equity"].iloc[-1], 60 / (50 * pf.CORE_BUY), places=9, msg="全部抱核心標的")
+        mixed = pf.daily_equity({"X": df}, trades, core=core, sleeve=0.3, slots=1)
+        rotated = pf.daily_equity({"X": df}, trades, core=core, sleeve=1.0, slots=1, idle_in_core=True)
+        self.assertLess(mixed["equity"].iloc[-1], only_core["equity"].iloc[-1], "三成資金換去不會漲的股票，少賺")
+        self.assertLess(rotated["equity"].iloc[-1], mixed["equity"].iloc[-1], "全部輪動出去，核心的漲幅沒吃到更多")
+        with self.assertRaises(ValueError):
+            pf.daily_equity({"X": df}, trades, sleeve=0.5)
 
 
 class NoLookAhead(unittest.TestCase):

@@ -1,3 +1,15 @@
+# precommit audit（2026-11-13 每天結算的投組、0050 搭配、法人資料抓取、籌碼條件腳本）
+- 變更範圍：twstock_lab/portfolio.py（新：daily_equity、summary）、run_portfolio.py（新）、run_chips.py（新，還沒有資料可跑）、twstock_lab/fetch.py（fetch_dataset、--dataset）、tests（多 3 個）、reports/PORTFOLIO.md 與 portfolio.csv。
+- 呼叫鏈：run_portfolio.run → prep.load_all → backtest.simulate（交易清單與回測相同）→ portfolio.daily_equity → summary。run_chips.run → load_flows（FinMind 法人買賣超）→ filters → backtest.simulate（進場訊號 & 籌碼條件）→ run_backtest.baseline / nearest（對照組沿用回測的）。
+- 資料鏈檢查：
+  - ✔ 出場金額用回測算好的淨報酬（alloc × (1 + ret)），所以每天結算版在出場後的權益和逐筆報酬一致（測試驗證到小數 9 位）。
+  - ✔ 持有期間用收盤價估值，沒有成交的日子沿用前一個收盤價；核心標的買賣成本另算（ETF 證交稅 0.1%）。
+  - ✔ 籌碼條件只用訊號當天（含）以前的法人資料，rolling 視窗不含未來；進場仍是隔天開盤。
+  - ✖→已修：沒有核心標的時進場那一步去讀 core_open（None）會當掉 → 沒有閒置單位就不讀（兩個測試先失敗後通過）。
+  - ⚠ 進場時每格資金 = 當下策略資產 ÷ 格數，其中持有部位用「前一天收盤價」估值（當天開盤還不知道收盤）。
+- 驗證：tests 13 個全過（新增：持有中途的回落每天結算看得到而舊算法看不到、分格與閒置現金、核心標的與輪動）；run_portfolio 實跑 13 列結果。
+- 未驗證：run_chips.py 還沒有資料可跑（法人資料抓取中）。
+
 # precommit audit（2026-11-13 theme_screen.py：題材名單初篩）
 - 變更範圍：theme_screen.py（新）。沒有改到既有程式。
 - 呼叫鏈：theme_screen.main → screen_one → stock_check.find_stock / exdiv_events / FINMIND 網址（和個股體檢同一組，快取共用）→ prep.load_prices / adjust → strategies.sma / prior_high / bollinger_dip。

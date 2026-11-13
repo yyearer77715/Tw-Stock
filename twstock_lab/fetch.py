@@ -143,12 +143,48 @@ def fetch_all(top: int = 150, years: int = 8, asof: date | None = None) -> Dict[
     return manifest
 
 
+FINMIND_DATASET = "https://api.finmindtrade.com/api/v4/data?dataset={dataset}&data_id={code}&start_date={start}"
+
+
+def fetch_dataset(dataset: str, manifest_name: str = "manifest_asof.json") -> Dict[str, object]:
+    """替 manifest 裡每一檔股票抓 FinMind 的另一個資料集（例如法人買賣超），網址記進 manifest 的 datasets。
+    一檔一次請求；額度用完（402）就停，約一小時後重跑同一個指令會從沒抓到的接續（已抓的走快取）。"""
+    f = fetcher()
+    path = DATA / manifest_name
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    done: Dict[str, str] = manifest.setdefault("datasets", {}).setdefault(dataset, {})
+    codes = [c for c in manifest["prices"] if c != BENCHMARK and c not in done]
+    stopped = ""
+    for i, code in enumerate(codes, 1):
+        url = FINMIND_DATASET.format(dataset=dataset, code=code, start=manifest["start"])
+        try:
+            f.get(url)
+            done[code] = url
+        except SiteBlocked as error:
+            stopped = f"{code}：{error}"
+            break
+        except Exception as error:  # noqa: BLE001
+            if "402" in str(error):
+                stopped = "FinMind 額度用完，約一小時後重跑會接續"
+                break
+            print(f"  {code} 失敗：{type(error).__name__}", flush=True)
+        if i % 10 == 0:
+            print(f"{dataset} {len(done)}/{len(manifest['prices']) - 1}", flush=True)
+            path.write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+    return {"done": len(done), "total": len(manifest["prices"]) - 1, "stopped": stopped}
+
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="抓回測用的資料（溫和抓取）")
     parser.add_argument("--asof", help="用這一天（YYYY-MM-DD）的成交值選股，名單沒有後見之明")
+    parser.add_argument("--dataset", help="只抓 FinMind 的另一個資料集（例如 TaiwanStockInstitutionalInvestorsBuySell），對象是 manifest_asof.json 的股票")
     args = parser.parse_args()
+    if args.dataset:
+        print(fetch_dataset(args.dataset))
+        raise SystemExit(0)
     result = fetch_all(asof=date.fromisoformat(args.asof) if args.asof else None)
     print(f"完成：股價 {len(result['prices'])} 檔、除權息 {sum(len(v) for v in result['exdiv'].values())} 份、失敗 {len(result['failed'])} 筆")
     for line in result["failed"]:

@@ -17,6 +17,12 @@ python run_backtest.py
 python -m unittest discover -s tests
 ```
 
+單一個股體檢（技術面、月營收、法人、融資、分點買賣超，並檢查回測驗證過的進場條件）：
+
+```bash
+python stock_check.py 2495      # 或 python stock_check.py 普安
+```
+
 結果在 `reports/REPORT.md`（摘要）與 `reports/results.csv`（全部組合）。
 
 抓資料用的是記憶中樞的 `gentle-fetch` 技能（`~/.claude/ai-memory-hub/skills/gentle-fetch/scripts/gentle_fetch.py`）；放在別處時設定環境變數 `GENTLE_FETCH_DIR`。

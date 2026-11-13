@@ -1,3 +1,15 @@
+# precommit audit（2026-11-13 stock_check.py：單一個股體檢）
+- 變更範圍：stock_check.py（新）、twstock_lab/backtest.py（stats 的數字轉成一般 float，只影響顯示）。
+- 呼叫鏈：stock_check.check → find_stock（證交所 / 櫃買清單）→ prep.load_prices / adjust（沿用回測的還原）→ strategies.bollinger_dip → backtest.simulate / stats / buy_and_hold；finmind（月營收、法人、融資）；記憶中樞 tw-branch-chips 的 fubon_parse.parse_summary（分點排行）。沒有改到回測流程。
+- 資料鏈檢查：
+  - ✔ 還原股價用的除權息表與回測同一組網址與同一個 load_exdiv。
+  - ✔ 進場條件與回測同一個函式、同一組參數（20, 2.0, 120），不是另外寫一份。
+  - ✔ 單位：成交量與法人、融資、分點都換成「張」；營收換成「億元」。
+  - ✔ 上市股票的清單沒有發行股數欄位 → 不印「占股本」比例，不亂估。
+  - ✔ 錯誤路徑：名稱對到 0 檔或多檔會列出候選並要求改用代號；分點單一期間抓不到只略過那一段。
+- 驗證：tests 10 個全過；實跑普安（2495），數字合理（收盤價與證交所清單一致）。新盛力是用同一段邏輯的手動版算的，沒有用這支腳本重跑。
+- 未驗證：stock_check.py 沒有自己的單元測試（它是把已測過的函式和抓到的資料印出來）；分點三個來源的一致性只在 2026-11-13 對新盛力驗過一次。
+
 # precommit audit（2026-11-13 第一輪回測結果 + 「過去某一天的名單」）
 - 變更範圍：twstock_lab/fetch.py（universe_asof、--asof、FinMind 額度用完就停）、prep.load_manifest 可指定檔名、run_backtest.py（--asof、報告標明名單有沒有後見之明）、backtest.buy_and_hold 回傳一般 float、reports/ 第一輪結果。
 - 資料鏈：fetch --asof → data/manifest_asof.json（多一個 universe_date）→ run_backtest --asof → prep.load_manifest("manifest_asof.json") → load_all → reports/REPORT_asof.md、results_asof.csv、meta_asof.json。原本不帶參數的路徑輸出檔名不變。

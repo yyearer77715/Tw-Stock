@@ -72,10 +72,10 @@ def stats(trades: List[Trade]) -> Dict[str, float]:
     return {
         "筆數": len(r),
         "勝率%": round(100 * len(wins) / len(r), 1),
-        "每筆平均%": round(100 * r.mean(), 2),
+        "每筆平均%": round(100 * float(r.mean()), 2),
         "中位數%": round(100 * float(np.median(r)), 2),
-        "平均賺%": round(100 * wins.mean(), 2) if len(wins) else 0.0,
-        "平均賠%": round(100 * losses.mean(), 2) if len(losses) else 0.0,
+        "平均賺%": round(100 * float(wins.mean()), 2) if len(wins) else 0.0,
+        "平均賠%": round(100 * float(losses.mean()), 2) if len(losses) else 0.0,
         "獲利因子": round(float(wins.sum() / -losses.sum()), 2) if losses.sum() < 0 else float("inf"),
         "平均持有天": round(float(np.mean([t.days for t in trades])), 1),
     }

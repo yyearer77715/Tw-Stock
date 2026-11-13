@@ -6,5 +6,6 @@ here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 dest="${1:-$HOME/.claude/ai-memory-hub/skills/tw-stock-check/scripts}"
 mkdir -p "$dest/twstock_lab"
 cp "$here/stock_check.py" "$dest/stock_check.py"
+cp "$here/theme_screen.py" "$dest/theme_screen.py"
 cp "$here"/twstock_lab/{__init__,fetch,prep,strategies,backtest}.py "$dest/twstock_lab/"
 echo "已複製到 $dest"

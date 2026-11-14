@@ -1,6 +1,7 @@
 """題材名單掃描：每檔寫出現況、進場條件、理由、看錯的訊號（0 token）。
 
     python run_theme.py ai-cold          # 讀 themes/ai-cold.json，結果寫 reports/THEME_ai-cold.md
+    python run_theme.py ai-cold 70       # 冷門再加一個條件：收盤價 70 元以下
     python run_theme.py                  # 列出有哪些題材名單
 
 名單檔 themes/<題材>.json 是事先整理好的（代號、和題材的關係、分級、出處）；這支程式不上網查名單，只抓每檔的日線與季財報（有快取）。
@@ -51,8 +52,9 @@ def measure(df: pd.DataFrame, eps_ttm: Optional[float]) -> Dict[str, object]:
     }
 
 
-def is_cold(m: Dict[str, object]) -> bool:
-    return m["均成交值億"] < COLD_VALUE and not m["連續漲停"]
+def is_cold(m: Dict[str, object], max_price: Optional[float] = None) -> bool:
+    """max_price 有給時，收盤價還要在它以下。"""
+    return m["均成交值億"] < COLD_VALUE and not m["連續漲停"] and (max_price is None or m["收盤"] <= max_price)
 
 
 def advice(m: Dict[str, object], broad: bool) -> Dict[str, str]:
@@ -122,7 +124,7 @@ def eps_ttm(code: str) -> Optional[float]:
         return None
 
 
-def run(theme: str) -> List[dict]:
+def run(theme: str, max_price: Optional[float] = None) -> List[dict]:
     spec = json.loads((THEMES / f"{theme}.json").read_text(encoding="utf-8"))
     market = market_now()
     rows = []
@@ -136,10 +138,10 @@ def run(theme: str) -> List[dict]:
             print(f"略過 {s['code']} {s['name']}：資料只到 {df.index[-1].date()} 或上市不滿一年", file=sys.stderr)
             continue
         m = measure(df, eps_ttm(s["code"]))
-        rows.append({**s, **m, "冷門": is_cold(m), **advice(m, market["全面大跌"])})
+        rows.append({**s, **m, "冷門": is_cold(m, max_price), "價格內": max_price is None or m["收盤"] <= max_price, **advice(m, market["全面大跌"])})
     order = {"符合進場條件": 0, "等止穩": 1, "還沒到條件": 2, "沒有驗證過的買點": 3, "不建議（個別下跌）": 4, "不建議": 5}
-    rows.sort(key=lambda r: (not r["冷門"], order[r["狀態"]], r["離60日線"]))
-    write_report(theme, spec, market, rows)
+    rows.sort(key=lambda r: (not r["冷門"], not r["價格內"], order[r["狀態"]], r["離60日線"]))
+    write_report(theme, spec, market, rows, max_price)
     return rows
 
 
@@ -154,14 +156,15 @@ def block(r: dict) -> str:
 """
 
 
-def write_report(theme: str, spec: dict, market: dict, rows: List[dict]) -> None:
+def write_report(theme: str, spec: dict, market: dict, rows: List[dict], max_price: Optional[float] = None) -> None:
     cold, rest = [r for r in rows if r["冷門"]], [r for r in rows if not r["冷門"]]
     REPORTS.mkdir(exist_ok=True)
+    price_text = f"，而且收盤價在 {max_price:g} 元以下" if max_price else ""
     (REPORTS / f"THEME_{theme}.md").write_text(f"""# {spec['name']}：題材名單掃描
 
 - 資料到 {market['日期'].date()}｜0050 近 5 天 {100 * market['0050近5天']:+.1f}%｜成交值前 150 檔裡跌到 60 日線下 15% 的佔 {100 * market['深跌比例']:.1f}%（超過 {BROAD:.0%} 算全面大跌：{'是' if market['全面大跌'] else '否'}）
 - 名單 {len(spec['stocks'])} 檔（{spec['updated']} 整理），掃得到的 {len(rows)} 檔：冷門 {len(cold)} 檔、不算冷門 {len(rest)} 檔。
-- 冷門 = 近 20 日平均成交值不到 {COLD_VALUE:.0f} 億，而且近 120 個交易日沒有連續兩天漲停。
+- 冷門 = 近 20 日平均成交值不到 {COLD_VALUE:.0f} 億，而且近 120 個交易日沒有連續兩天漲停{price_text}。
 - {spec['note']}
 - **限制**：進場條件是用成交值前 150 大的股票回測的，冷門小型股沒有回測過；小型股成交量小，買賣價差與滑價比回測假設的大。這不是投資建議，也不保證獲利。
 
@@ -174,10 +177,10 @@ def write_report(theme: str, spec: dict, market: dict, rows: List[dict]) -> None
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        raise SystemExit("用法：python run_theme.py <題材>；現有題材：" + "、".join(sorted(p.stem for p in THEMES.glob("*.json"))))
-    result = run(sys.argv[1])
-    table = pd.DataFrame([{"代號": r["code"], "名稱": r["name"], "分級": r["grade"], "冷門": "是" if r["冷門"] else "", "狀態": r["狀態"],
+    if len(sys.argv) not in (2, 3):
+        raise SystemExit("用法：python run_theme.py <題材> [股價上限]；現有題材：" + "、".join(sorted(p.stem for p in THEMES.glob("*.json"))))
+    result = run(sys.argv[1], float(sys.argv[2]) if len(sys.argv) == 3 else None)
+    table = pd.DataFrame([{"代號": r["code"], "名稱": r["name"], "分級": r["grade"], "冷門": "是" if r["冷門"] else "", "價格內": "是" if r["價格內"] else "", "狀態": r["狀態"],
                            "收盤": round(r["收盤"], 1), "離60日線%": round(100 * r["離60日線"], 1), "近5日%": round(100 * r["近5日"], 1),
                            "均成交值億": round(r["均成交值億"], 1), "近四季EPS": r["近四季EPS"] if r["近四季EPS"] is None else round(r["近四季EPS"], 2)}
                           for r in result])

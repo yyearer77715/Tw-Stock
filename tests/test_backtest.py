@@ -199,6 +199,27 @@ class ThemeAdvice(unittest.TestCase):
         self.assertFalse(m["連續漲停"])
 
 
+class SectorPick(unittest.TestCase):
+    def test_pick_keeps_cheap_quiet_fallen_electronics_only(self):
+        import run_sector
+        q = lambda close, value=5e7: {"name": "x", "close": close, "value": value}  # noqa: E731
+        now = {"1111": q(40), "2222": q(40), "3333": q(90), "4444": q(40, 9e8), "5555": q(40), "6666": q(40), "0050": q(40)}
+        old = {"1111": q(60), "2222": q(42), "3333": q(150), "4444": q(60, 9e8), "5555": q(60), "6666": q(60), "0050": q(60)}
+        sector = {c: "半導體業" for c in now if c != "5555"}
+        mid = dict(old)
+        del mid["6666"]                                   # 中間那天沒有成交價
+        got = run_sector.pick(now, mid, old, sector, 70)
+        self.assertEqual([r["code"] for r in got], ["1111"], "跌不夠、太貴、成交值太大、不是電子業、缺資料、ETF 都要排除")
+        self.assertAlmostEqual(got[0]["drop"], 40 / 60 - 1)
+
+    def test_price_cap_is_part_of_cold_when_given(self):
+        import run_theme
+        m = {"收盤": 80.0, "均成交值億": 1.0, "連續漲停": False}
+        self.assertTrue(run_theme.is_cold(m))
+        self.assertFalse(run_theme.is_cold(m, 70))
+        self.assertTrue(run_theme.is_cold({**m, "收盤": 70.0}, 70))
+
+
 class CrashFilters(unittest.TestCase):
     def test_market_state_and_filters_use_only_past_days(self):
         """大盤狀態與濾網：只給前 250 天算出來的，要和給全部 300 天再取前 250 天的一樣。"""

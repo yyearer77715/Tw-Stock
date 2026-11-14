@@ -1,0 +1,287 @@
+{
+ "name": "電子產業低價冷門股（70 元以下）",
+ "updated": "2026-11-13",
+ "note": "不是 AI 概念股名單：這是 AI 供應鏈所在的電子相關產業裡，收盤 70 元以下、成交值 0.1～3 億、比 2026-08-14 低 15% 以上的股票，取跌最深的 40 檔。個別公司和 AI 有沒有關係沒有查，分級欄一律是「未查」。",
+ "stocks": [
+  {
+   "code": "8084",
+   "name": "巨虹",
+   "grade": "未查",
+   "role": "電子通路業；粗篩時收盤 6.83、比 60 個交易日前 -87%、成交值約 0.2 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "3230",
+   "name": "錦明",
+   "grade": "未查",
+   "role": "光電業；粗篩時收盤 22.1、比 60 個交易日前 -50%、成交值約 0.3 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "5464",
+   "name": "霖宏",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 46.5、比 60 個交易日前 -38%、成交值約 0.5 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "2364",
+   "name": "倫飛",
+   "grade": "未查",
+   "role": "電腦及週邊設備業；粗篩時收盤 50.8、比 60 個交易日前 -37%、成交值約 0.2 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "6432",
+   "name": "今展科",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 46.3、比 60 個交易日前 -36%、成交值約 0.8 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "6243",
+   "name": "迅杰",
+   "grade": "未查",
+   "role": "半導體業；粗篩時收盤 31.5、比 60 個交易日前 -33%、成交值約 0.9 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "6412",
+   "name": "群電",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 53.8、比 60 個交易日前 -32%、成交值約 0.4 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "5392",
+   "name": "能率",
+   "grade": "未查",
+   "role": "光電業；粗篩時收盤 32、比 60 個交易日前 -29%、成交值約 0.4 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "6642",
+   "name": "富致",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 59.9、比 60 個交易日前 -29%、成交值約 0.2 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "5225",
+   "name": "東科-KY",
+   "grade": "未查",
+   "role": "其他電子業；粗篩時收盤 43.3、比 60 個交易日前 -29%、成交值約 0.1 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "6188",
+   "name": "廣明",
+   "grade": "未查",
+   "role": "電腦及週邊設備業；粗篩時收盤 50.1、比 60 個交易日前 -29%、成交值約 0.6 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "6259",
+   "name": "百徽",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 23.9、比 60 個交易日前 -29%、成交值約 0.2 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "3207",
+   "name": "耀勝",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 30.95、比 60 個交易日前 -28%、成交值約 0.2 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "2417",
+   "name": "圓剛",
+   "grade": "未查",
+   "role": "電腦及週邊設備業；粗篩時收盤 32.75、比 60 個交易日前 -27%、成交值約 0.2 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "5471",
+   "name": "松翰",
+   "grade": "未查",
+   "role": "半導體業；粗篩時收盤 42.65、比 60 個交易日前 -27%、成交值約 1.5 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "2425",
+   "name": "承啟",
+   "grade": "未查",
+   "role": "電腦及週邊設備業；粗篩時收盤 30、比 60 個交易日前 -27%、成交值約 0.6 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "3317",
+   "name": "尼克森",
+   "grade": "未查",
+   "role": "半導體業；粗篩時收盤 50.1、比 60 個交易日前 -27%、成交值約 0.5 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "3003",
+   "name": "健和興",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 49.15、比 60 個交易日前 -26%、成交值約 0.4 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "8234",
+   "name": "新漢",
+   "grade": "未查",
+   "role": "電腦及週邊設備業；粗篩時收盤 51.1、比 60 個交易日前 -26%、成交值約 0.2 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "3694",
+   "name": "海華",
+   "grade": "未查",
+   "role": "通信網路業；粗篩時收盤 39.7、比 60 個交易日前 -26%、成交值約 0.4 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "2374",
+   "name": "佳能",
+   "grade": "未查",
+   "role": "光電業；粗篩時收盤 52.1、比 60 個交易日前 -26%、成交值約 1.2 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "3312",
+   "name": "弘憶股",
+   "grade": "未查",
+   "role": "電子通路業；粗篩時收盤 40.8、比 60 個交易日前 -26%、成交值約 1.5 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "3229",
+   "name": "晟鈦",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 40、比 60 個交易日前 -26%、成交值約 0.3 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "2495",
+   "name": "普安",
+   "grade": "未查",
+   "role": "電腦及週邊設備業；粗篩時收盤 29.4、比 60 個交易日前 -26%、成交值約 0.4 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "6175",
+   "name": "立敦",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 57.7、比 60 個交易日前 -25%、成交值約 0.9 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "6498",
+   "name": "久禾光",
+   "grade": "未查",
+   "role": "光電業；粗篩時收盤 55.8、比 60 個交易日前 -25%、成交值約 0.1 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "8105",
+   "name": "凌巨",
+   "grade": "未查",
+   "role": "光電業；粗篩時收盤 12.5、比 60 個交易日前 -25%、成交值約 0.2 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "2485",
+   "name": "兆赫",
+   "grade": "未查",
+   "role": "通信網路業；粗篩時收盤 32.1、比 60 個交易日前 -25%、成交值約 1.2 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "3048",
+   "name": "益登",
+   "grade": "未查",
+   "role": "電子通路業；粗篩時收盤 43.9、比 60 個交易日前 -25%、成交值約 1.9 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "3528",
+   "name": "安馳",
+   "grade": "未查",
+   "role": "電子通路業；粗篩時收盤 67.6、比 60 個交易日前 -25%、成交值約 0.2 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "6854",
+   "name": "錼創科技-KY創",
+   "grade": "未查",
+   "role": "半導體業；粗篩時收盤 69.5、比 60 個交易日前 -25%、成交值約 0.1 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "3078",
+   "name": "僑威",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 39.95、比 60 個交易日前 -25%、成交值約 0.2 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "8088",
+   "name": "品安",
+   "grade": "未查",
+   "role": "半導體業；粗篩時收盤 36.35、比 60 個交易日前 -25%、成交值約 0.3 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "5457",
+   "name": "宣德",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 20.6、比 60 個交易日前 -25%、成交值約 0.1 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "6477",
+   "name": "安集",
+   "grade": "未查",
+   "role": "光電業；粗篩時收盤 28.9、比 60 個交易日前 -24%、成交值約 0.7 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "8182",
+   "name": "加高",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 30.4、比 60 個交易日前 -24%、成交值約 0.3 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "2331",
+   "name": "精英",
+   "grade": "未查",
+   "role": "電腦及週邊設備業；粗篩時收盤 15.8、比 60 個交易日前 -24%、成交值約 1.1 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "6143",
+   "name": "振曜",
+   "grade": "未查",
+   "role": "通信網路業；粗篩時收盤 69.5、比 60 個交易日前 -24%、成交值約 0.4 億",
+   "source": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+  },
+  {
+   "code": "2388",
+   "name": "威盛",
+   "grade": "未查",
+   "role": "半導體業；粗篩時收盤 58.2、比 60 個交易日前 -24%、成交值約 1.9 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  },
+  {
+   "code": "2457",
+   "name": "飛宏",
+   "grade": "未查",
+   "role": "電子零組件業；粗篩時收盤 18.05、比 60 個交易日前 -23%、成交值約 0.2 億",
+   "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  }
+ ]
+}

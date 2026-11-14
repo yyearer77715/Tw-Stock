@@ -1,3 +1,15 @@
+# precommit audit（2026-11-14 run_sector.py：全市場粗篩電子產業低價冷門股；run_theme.py 加股價上限）
+- 變更範圍：run_sector.py（新）、themes/elec-cheap.json（新，粗篩出的 40 檔）、run_theme.py（is_cold / run / write_report 多一個可省略的 max_price，表格多「價格內」欄）、reports/THEME_ai-cold.md（用 70 元重跑）、tests（22 → 24）。
+- 呼叫鏈：run_sector.main → industries（證交所、櫃買公司產業別）→ quotes × 3 天（fetch.TWSE_DAY / TPEX_DAY，和 universe_asof 同一組網址）→ pick → themes/elec-cheap.json → run_theme.run（沒有改流程）。
+- 資料鏈檢查：
+  - ✔ 交易日用 0050 的日線索引取 −1、−21、−61，不會選到假日。
+  - ✔ pick 的每個排除條件都有測試（跌不夠、超過價格上限、成交值太大、不是電子業、三天缺一天、非普通股）。
+  - ✔ run_theme 不帶第二個參數時行為和上一版相同（max_price=None），舊的 4 個測試照過。
+  - ⚠ 粗篩的跌幅用沒有還原的收盤價，減資 / 除權息會失真（例：巨虹 −87%）；只用來挑候選，真正的判斷在 run_theme 用還原後的日線重算，名單檔的 note 有寫。
+  - ⚠ 產業別 24～31 是「電子相關」，不是 AI 概念；名單名稱、note、分級欄（一律「未查」）都寫明。
+- 驗證：tests 24 個全過；run_sector.py 70 實跑粗篩到 40 檔；run_theme.py ai-cold 70 實跑。
+- 未驗證：run_theme.py elec-cheap 70 還在背景跑（FinMind 額度）；冷門小型股沒有回測。
+
 # precommit audit（2026-11-14 run_theme.py：題材名單掃描，每檔寫現況 / 進場條件 / 理由 / 看錯的訊號）
 - 變更範圍：run_theme.py（新）、themes/ai-cold.json（新，22 檔，附分級與出處）、reports/THEME_ai-cold.md（新）、tests（18 → 22）。沒有改既有程式。
 - 呼叫鏈：run → market_now（prep.load_all manifest.json → run_crash.market_state，只讀快取）→ 每檔 load_stock（和 theme_screen.screen_one 同一段：prep.load_prices → prep.adjust）→ eps_ttm（stock_check.finmind 季財報）→ measure → is_cold / advice → write_report。

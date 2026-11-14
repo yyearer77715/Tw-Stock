@@ -1,3 +1,14 @@
+# precommit audit（2026-11-14 run_scan.py：列出今天符合逢低條件的股票）
+- 變更範圍：run_scan.py（新，只讀快取，不改既有程式）。
+- 呼叫鏈：scan → prep.load_manifest / load_all（兩份名單）→ run_crash.market_state（大盤狀態）→ strategies.bias_dip / dry_up_low（和回測同一組參數 60 / 0.15、60 / 0.7 / 20）→ run_chips.load_flows（有法人資料的才算外資連 3 買）。
+- 資料鏈檢查：
+  - ✔ 條件和回測用同一個函式、同一組參數，沒有另外寫一份判斷。
+  - ✔ 只列最後交易日和 0050 同一天的股票（停牌或資料沒更新的不列）；兩份名單重複的股票只列一次。
+  - ✔ 輸出第一行印資料日期與大盤狀態，避免把舊快取當成今天。
+  - ⚠ 「止穩」「外資連 3 買」只是把回測裡有差別的條件列出來，沒有排序或評分；今天名單的股票多數沒有法人資料（只抓了 2023-12-29 那份名單的）。
+- 驗證：實跑一次，資料到 2026-11-13，73 檔當天在訊號中；乖離率數字抽查 2308、2303 與 stock_check 的算法一致（同一個 sma）。
+- 未驗證：沒有單元測試；股價是還原後的價格，除權息後和看盤軟體的均線可能差一點。
+
 # precommit audit（2026-11-14 八種新技術方法、大跌濾網 run_crash.py、隔日沖分點 run_daytrade.py）
 - 變更範圍：twstock_lab/strategies.py（新增 williams_dip、cci_cross、sar_flip、obv_breakout、gap_up、granville、ichimoku、dry_up_low，CATALOG 12 → 20 種）；run_crash.py（新）；run_daytrade.py（新，分點資料還在抓，analyse 還沒跑過真資料）；tests（14 → 17）；reports/REPORT_asof.md、results_asof.csv、meta_asof.json（重跑，87 → 129 個組合）、reports/CRASH.md、crash.csv。
 - 呼叫鏈：run_backtest.run → CATALOG 每個函式 → backtest.simulate（沒改）；run_crash.run → prep.load_all → market_state（0050 與全名單）→ filters → simulate → stats → run_backtest.baseline / nearest；run_daytrade.events → do_fetch（GentleFetcher、三個來源輪流）→ analyse → fubon_parse.parse_summary → flips / daytrade_share / forward_return。

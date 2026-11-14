@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -87,7 +88,9 @@ def day_url(code: str, day: pd.Timestamp, host: str) -> str:
     return f"https://{host}/z/zc/zco/zco.djhtm?a={code}&e={d}&f={d}"
 
 
-def do_fetch() -> None:
+def do_fetch(minutes: float = 100) -> None:
+    """抓到 minutes 分鐘就自己收工（背景工作上限是兩小時，被系統砍掉就不能自動接續）；還沒抓完時結束碼是 3，再跑一次會接續。"""
+    deadline = time.monotonic() + minutes * 60
     _, found = events()
     wanted = [(c, d) for c, d0, d1 in found for d in (d0, d1)]
     f = fetch.GentleFetcher(str(fetch.DATA / "branch" / "cache"), encoding="big5")
@@ -98,6 +101,9 @@ def do_fetch() -> None:
         key = f"{code}|{day.date()}"
         if key in index:
             continue
+        if time.monotonic() > deadline:
+            print(f"時間到，先收工（已抓 {len(index)} 頁），再跑一次會接續", flush=True)
+            break
         host = next((h for h in HOSTS[i % 3:] + HOSTS[:i % 3] if h not in blocked), None)
         if host is None:
             print("三個來源都被拒絕，停止", flush=True)
@@ -115,7 +121,10 @@ def do_fetch() -> None:
             print(f"分點頁 {len(index)}/{len(wanted)}", flush=True)
             INDEX.write_text(json.dumps(index, ensure_ascii=False, indent=0), encoding="utf-8")
     INDEX.write_text(json.dumps(index, ensure_ascii=False, indent=0), encoding="utf-8")
-    print(f"完成：{sum(f'{c}|{d.date()}' in index for c, d in wanted)}/{len(wanted)} 頁", flush=True)
+    done = sum(f'{c}|{d.date()}' in index for c, d in wanted)
+    print(f"完成：{done}/{len(wanted)} 頁", flush=True)
+    if done < len(wanted) and not blocked:
+        raise SystemExit(3)
 
 
 def summarise(values: List[float]) -> Dict[str, float]:

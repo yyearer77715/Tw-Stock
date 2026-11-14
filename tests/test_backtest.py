@@ -158,6 +158,47 @@ class DayTradeWarning(unittest.TestCase):
         self.assertEqual(stock_check.daytrade_note([{"name": listed, "net": -50.0}]), "", "賣超的不算")
 
 
+class ThemeAdvice(unittest.TestCase):
+    BASE = {"收盤": 80.0, "前一天最高": 82.0, "60日線": 100.0, "20日線": 90.0, "離60日線": -0.20, "近5日": 0.0, "近20日": -0.1,
+            "離250日高": -0.4, "均成交值億": 1.0, "連續漲停": False, "止穩": False, "量縮止跌": False, "近四季EPS": 2.0}
+
+    def advice(self, broad=True, **change):
+        import run_theme
+        return run_theme.advice({**self.BASE, **change}, broad)
+
+    def test_status_follows_the_backtested_conditions(self):
+        self.assertEqual(self.advice()["狀態"], "等止穩")
+        self.assertIn("82.0", self.advice()["進場條件"], "要寫出得站上的價位")
+        self.assertIn("85.0", self.advice()["進場條件"], "要寫出 60 日線的 85%")
+        self.assertEqual(self.advice(止穩=True, 收盤=83.0, 離60日線=-0.17)["狀態"], "符合進場條件")
+        self.assertEqual(self.advice(broad=False, 止穩=True)["狀態"], "不建議（個別下跌）")
+        self.assertEqual(self.advice(離60日線=-0.10, 收盤=90.0)["狀態"], "還沒到條件")
+        self.assertEqual(self.advice(離60日線=0.05, 收盤=105.0)["狀態"], "沒有驗證過的買點")
+
+    def test_losing_company_is_never_an_entry_even_when_price_conditions_hold(self):
+        out = self.advice(止穩=True, 近四季EPS=-2.0)
+        self.assertEqual(out["狀態"], "不建議")
+        self.assertIn("-2.00", out["理由"])
+        self.assertEqual(self.advice(止穩=True, 近四季EPS=None)["狀態"], "符合進場條件", "抓不到財報時不當成虧損")
+
+    def test_cold_means_small_turnover_and_no_consecutive_limit_ups(self):
+        import run_theme
+        self.assertTrue(run_theme.is_cold(self.BASE))
+        self.assertFalse(run_theme.is_cold({**self.BASE, "均成交值億": 3.5}))
+        self.assertFalse(run_theme.is_cold({**self.BASE, "連續漲停": True}))
+
+    def test_measure_reads_the_last_day(self):
+        import run_theme
+        closes = [100.0] * 260 + [70.0, 75.0]
+        df = frame(closes)
+        m = run_theme.measure(df, 1.5)
+        self.assertAlmostEqual(m["收盤"], 75.0)
+        self.assertAlmostEqual(m["前一天最高"], 70.0)
+        self.assertTrue(m["止穩"])
+        self.assertLess(m["離60日線"], -0.15)
+        self.assertFalse(m["連續漲停"])
+
+
 class CrashFilters(unittest.TestCase):
     def test_market_state_and_filters_use_only_past_days(self):
         """大盤狀態與濾網：只給前 250 天算出來的，要和給全部 300 天再取前 250 天的一樣。"""

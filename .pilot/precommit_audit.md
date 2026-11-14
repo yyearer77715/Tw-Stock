@@ -1,3 +1,17 @@
+# precommit audit（2026-11-14 run_theme.py：題材名單掃描，每檔寫現況 / 進場條件 / 理由 / 看錯的訊號）
+- 變更範圍：run_theme.py（新）、themes/ai-cold.json（新，22 檔，附分級與出處）、reports/THEME_ai-cold.md（新）、tests（18 → 22）。沒有改既有程式。
+- 呼叫鏈：run → market_now（prep.load_all manifest.json → run_crash.market_state，只讀快取）→ 每檔 load_stock（和 theme_screen.screen_one 同一段：prep.load_prices → prep.adjust）→ eps_ttm（stock_check.finmind 季財報）→ measure → is_cold / advice → write_report。
+- 資料鏈檢查：
+  - ✔ 進場條件用的數字和回測同一個來源：跌深 15%（bias_dip 的 below）、全面大跌 10%（run_crash 的分界）、量縮止跌用 strategies.dry_up_low 同一組參數；理由裡的回測數字（522 / 315 / 479 / 320 筆等）逐一對過 reports/CRASH.md 與 REPORT_asof.md。
+  - ✔ 「等止穩」的價位寫的是前一天最高與 60 日線 × 0.85，測試檢查文字裡真的有這兩個價位。
+  - ✔ 虧損優先於價格條件：近四季每股盈餘為負一律「不建議」；財報抓不到時是 None，不當成虧損（測試涵蓋），表格會顯示空值。
+  - ✔ 只列最後交易日和 0050 同一天、上市滿 250 天的股票。
+  - ⚠ 名單來自網路搜尋，分級是照報導粗分；名單檔的 note 與報告開頭都有寫。
+  - ⚠ 回測用的是成交值前 150 大，冷門小型股沒有回測；報告開頭列為限制。
+  - ⚠ 實跑時 FinMind 額度接近上限，力致、宏致的季財報抓不到（近四季 EPS 空白），所以這兩檔沒有做虧損檢查。
+- 驗證：tests 22 個全過；實跑 ai-cold 22 檔都掃到；抽查泰碩（成交值 0.2 億但近 120 日有連續漲停 → 不算冷門）、尼得科超眾（成交值 0.05 億）。
+- 未驗證：只跑了一個題材；沒有對冷門小型股回測。
+
 # precommit audit（2026-11-14 隔日沖分點完整結果 + 個股體檢加警示）
 - 變更範圍：reports/DAYTRADE.md、daytrade.csv（1,200 頁抓齊後重跑）；twstock_lab/daytrade_branches.json（新，16 個分點的名單）；stock_check.py（daytrade_note：1 日買超榜上有名單裡的分點就印一行警示）；export_skill.sh（名單一起複製到全域技能）；tests（17 → 18）。
 - 呼叫鏈：run_daytrade.analyse → data/branch/daytrade_branches.json → 複製成 twstock_lab/daytrade_branches.json → stock_check.daytrade_note（只在 1 日排行那一段呼叫）。

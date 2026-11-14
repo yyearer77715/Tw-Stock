@@ -1,3 +1,13 @@
+# precommit audit（2026-11-14 冷門股回測初步結果：REPORT_small.md、CRASH_small.md，只有 67 / 150 檔）
+- 變更範圍：只新增報告與數字檔（reports/REPORT_small.md、results_small.csv、meta_small.json、CRASH_small.md、crash_small.csv），程式沒改。
+- 資料鏈檢查：
+  - ✔ 報告開頭寫明名單 150 檔、其中 67 檔有足夠資料；CRASH_small.md 寫「實際有資料的 67 檔」。
+  - ⚠ 抓取順序是照成交值由大到小，所以這 67 檔是冷門股名單裡成交值較大的那一半（約 0.4～3 億），最冷門的那一半還沒進來，結果可能偏樂觀。回報時要講。
+  - ✔ 名單日期 2023-12-29 在驗證期之前，沒有後見之明；對照組是這 67 檔自己（驗證期抱 40 天平均 +1.54%，個股買進抱著年化中位數 −2.1%）。
+  - ✔ 還原時接起來的異常跳空 6 檔共 7 次，數量正常。
+- 驗證：run_backtest.py --small 與 run_crash.py small 實跑；tests 26 個全過（程式沒改）。
+- 未驗證：剩下 83 檔還在背景抓（FinMind 免費額度每小時只放行幾檔到二十幾檔）；抓齊後數字會變。
+
 # precommit audit（2026-11-14 題材掃描加本業虧損檢查；回測與大跌濾網可指定冷門股名單）
 - 變更範圍：run_theme.py（eps_ttm 換成 ttm + fundamentals，measure / advice 多「近四季本業億」，本業虧損一律不建議）；twstock_lab/fetch.py（universe_asof / fetch_all 多 value_range，CLI 加 --small，寫 manifest_small.json 與 universe_note）；run_crash.py（run 多 universe 參數，small → CRASH_small.md）；run_backtest.py（--small → REPORT_small.md，報告的名單說明改讀 manifest）；三份 THEME 報告重跑；tests（24 → 26）。
 - 呼叫鏈：run_theme.run → fundamentals → stock_check.finmind（季財報，同一個網址，有快取）→ ttm（EPS、OperatingIncome）→ measure → advice。fetch.fetch_all(value_range) → universe_asof（過濾成交值範圍、等距取樣）→ manifest_small.json → run_backtest.run / run_crash.run。

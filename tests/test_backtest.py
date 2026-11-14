@@ -8,6 +8,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from twstock_lab import backtest as bt  # noqa: E402
+from twstock_lab import portfolio as pf  # noqa: E402
 from twstock_lab import prep, strategies as st  # noqa: E402
 
 
@@ -80,6 +81,179 @@ class Engine(unittest.TestCase):
         self.assertAlmostEqual(s["獲利因子"], 12.0)
         p = bt.portfolio(trades, slots=2)
         self.assertEqual((p["成交筆數"], p["略過筆數"]), (2, 1), "只有 2 個空位，第三筆同一天的訊號進不去")
+
+
+class DailyPortfolio(unittest.TestCase):
+    def one_trade(self, closes):
+        df = frame(closes, closes)
+        entry, exit_ = flags(len(closes), 0).set_axis(df.index), flags(len(closes), len(closes) - 3).set_axis(df.index)
+        return df, bt.simulate("X", df, entry, exit_)
+
+    def test_drawdown_inside_a_trade_is_visible_daily(self):
+        """進場後中途跌三成又漲回來：只在出場時結算看不到回落，每天結算要看得到。"""
+        df, trades = self.one_trade([100, 100, 70, 70, 100, 100, 100])
+        curve = pf.daily_equity({"X": df}, trades, slots=1)
+        self.assertLess(pf.summary(curve)["最大回落%"], -25)
+        self.assertGreater(bt.portfolio(trades, slots=1)["最大回落%"], -2, "舊算法只看到手續費那一點點")
+        self.assertAlmostEqual(curve["equity"].iloc[-1], 1 + trades[0].ret, places=9, msg="出場後的權益 = 這筆的淨報酬")
+
+    def test_slots_split_capital_and_idle_cash_stays_flat(self):
+        df, trades = self.one_trade([100, 100, 100, 110, 110, 110, 110])
+        curve = pf.daily_equity({"X": df}, trades, slots=4)
+        self.assertAlmostEqual(curve["equity"].iloc[-1], 1 + trades[0].ret / 4, places=9, msg="只用四分之一的資金")
+        self.assertLessEqual(curve["invested"].max(), 0.30)
+
+    def test_core_holding_and_rotation(self):
+        df, trades = self.one_trade([100] * 7)
+        core = frame([50, 50, 55, 55, 60, 60, 60], [50, 50, 55, 55, 60, 60, 60])
+        only_core = pf.daily_equity({"X": df}, [], core=core, sleeve=0.0)
+        self.assertAlmostEqual(only_core["equity"].iloc[-1], 60 / (50 * pf.CORE_BUY), places=9, msg="全部抱核心標的")
+        mixed = pf.daily_equity({"X": df}, trades, core=core, sleeve=0.3, slots=1)
+        rotated = pf.daily_equity({"X": df}, trades, core=core, sleeve=1.0, slots=1, idle_in_core=True)
+        self.assertLess(mixed["equity"].iloc[-1], only_core["equity"].iloc[-1], "三成資金換去不會漲的股票，少賺")
+        self.assertLess(rotated["equity"].iloc[-1], mixed["equity"].iloc[-1], "全部輪動出去，核心的漲幅沒吃到更多")
+        with self.assertRaises(ValueError):
+            pf.daily_equity({"X": df}, trades, sleeve=0.5)
+
+
+class BranchConcentration(unittest.TestCase):
+    def test_ratio_and_signal_window(self):
+        import run_branch
+        self.assertAlmostEqual(run_branch.concentration([{"net": 300.0}, {"net": 100.0}], [{"net": -100.0}]), 0.8)
+        self.assertIsNone(run_branch.concentration([], []), "沒有買賣超資料就不分組")
+        df = frame([100.0] * 10)
+        start, end = run_branch.window_of(df, df.index[7])
+        self.assertEqual((start, end), (df.index[2], df.index[6]), "訊號日是進場日的前一個交易日，往前共 5 個交易日，不含進場日")
+        url = run_branch.branch_url("4931", pd.Timestamp("2024-08-01"), pd.Timestamp("2024-08-05"), "example.com")
+        self.assertTrue(url.endswith("a=4931&e=2024-8-1&f=2024-8-5"))
+
+
+class DayTradeBranches(unittest.TestCase):
+    def test_flip_needs_next_day_selling_of_at_least_half(self):
+        import run_daytrade as dt
+        buys = [{"name": "甲", "net": 100.0}, {"name": "乙", "net": 100.0}, {"name": "丙", "net": 100.0}]
+        sells = [{"name": "甲", "net": -60.0}, {"name": "乙", "net": -40.0}]
+        self.assertEqual(dt.flips(buys, sells), {"甲": True, "乙": False, "丙": False})
+        self.assertAlmostEqual(dt.daytrade_share(buys, {"甲"}), 1 / 3)
+        self.assertIsNone(dt.daytrade_share([], {"甲"}))
+
+    def test_forward_return_buys_next_open_and_skips_limit_up(self):
+        import run_daytrade as dt
+        df = frame([100, 100, 100, 110, 110])
+        cost = (1 - bt.SLIPPAGE) * (1 - bt.FEE - bt.TAX) / ((1 + bt.SLIPPAGE) * (1 + bt.FEE))
+        self.assertAlmostEqual(dt.forward_return(df, 0, 2), 1.1 * cost - 1)   # 第 1 天開盤 100 買、第 3 天開盤 110 賣
+        self.assertIsNone(dt.forward_return(df, 3, 5), "資料不夠長就不算")
+        self.assertIsNone(dt.forward_return(frame([100, 110, 110, 110]), 0, 1), "隔天開盤漲停買不到")
+
+
+class DayTradeWarning(unittest.TestCase):
+    def test_stock_check_warns_only_when_a_listed_branch_is_a_top_buyer(self):
+        import json
+        import stock_check
+        listed = next(iter(json.loads(stock_check.DAYTRADE_FILE.read_text(encoding="utf-8"))))
+        note = stock_check.daytrade_note([{"name": listed, "net": 300.0}, {"name": "不在名單的分點", "net": 700.0}])
+        self.assertIn(listed, note)
+        self.assertIn("30%", note)
+        self.assertEqual(stock_check.daytrade_note([{"name": "不在名單的分點", "net": 700.0}]), "")
+        self.assertEqual(stock_check.daytrade_note([{"name": listed, "net": -50.0}]), "", "賣超的不算")
+
+
+class ThemeAdvice(unittest.TestCase):
+    BASE = {"收盤": 80.0, "前一天最高": 82.0, "60日線": 100.0, "20日線": 90.0, "離60日線": -0.20, "近5日": 0.0, "近20日": -0.1,
+            "離250日高": -0.4, "均成交值億": 1.0, "連續漲停": False, "止穩": False, "量縮止跌": False, "近四季EPS": 2.0}
+
+    def advice(self, broad=True, **change):
+        import run_theme
+        return run_theme.advice({**self.BASE, **change}, broad)
+
+    def test_status_follows_the_backtested_conditions(self):
+        self.assertEqual(self.advice()["狀態"], "等止穩")
+        self.assertIn("82.0", self.advice()["進場條件"], "要寫出得站上的價位")
+        self.assertIn("85.0", self.advice()["進場條件"], "要寫出 60 日線的 85%")
+        self.assertEqual(self.advice(止穩=True, 收盤=83.0, 離60日線=-0.17)["狀態"], "符合進場條件")
+        self.assertEqual(self.advice(broad=False, 止穩=True)["狀態"], "不建議（個別下跌）")
+        self.assertEqual(self.advice(離60日線=-0.10, 收盤=90.0)["狀態"], "還沒到條件")
+        self.assertEqual(self.advice(離60日線=0.05, 收盤=105.0)["狀態"], "沒有驗證過的買點")
+
+    def test_losing_company_is_never_an_entry_even_when_price_conditions_hold(self):
+        out = self.advice(止穩=True, 近四季EPS=-2.0)
+        self.assertEqual(out["狀態"], "不建議")
+        self.assertIn("-2.00", out["理由"])
+        self.assertEqual(self.advice(止穩=True, 近四季EPS=None)["狀態"], "符合進場條件", "抓不到財報時不當成虧損")
+
+    def test_operating_loss_is_never_an_entry_even_with_positive_eps(self):
+        out = self.advice(止穩=True, 近四季EPS=1.7, 近四季本業億=-13.6)
+        self.assertEqual(out["狀態"], "不建議")
+        self.assertIn("-13.6", out["理由"])
+        self.assertEqual(self.advice(止穩=True, 近四季本業億=2.0)["狀態"], "符合進場條件")
+        self.assertEqual(self.advice(止穩=True, 近四季本業億=None)["狀態"], "符合進場條件", "抓不到財報時不當成虧損")
+
+    def test_ttm_sums_the_last_four_quarters_of_one_item(self):
+        import run_theme
+        rows = [{"date": f"2025-{m:02d}-30", "type": kind, "value": v}
+                for m, v in ((3, 1.0), (6, 2.0), (9, 3.0), (12, 4.0)) for kind in ("EPS", "OperatingIncome")]
+        rows.insert(0, {"date": "2024-12-30", "type": "EPS", "value": 100.0})
+        self.assertAlmostEqual(run_theme.ttm(rows, "EPS"), 10.0)
+        self.assertAlmostEqual(run_theme.ttm(rows, "OperatingIncome"), 10.0)
+        self.assertIsNone(run_theme.ttm(rows[:3], "OperatingIncome"), "不滿四季不算")
+        self.assertIsNone(run_theme.ttm([], "EPS"))
+
+    def test_cold_means_small_turnover_and_no_consecutive_limit_ups(self):
+        import run_theme
+        self.assertTrue(run_theme.is_cold(self.BASE))
+        self.assertFalse(run_theme.is_cold({**self.BASE, "均成交值億": 3.5}))
+        self.assertFalse(run_theme.is_cold({**self.BASE, "連續漲停": True}))
+
+    def test_measure_reads_the_last_day(self):
+        import run_theme
+        closes = [100.0] * 260 + [70.0, 75.0]
+        df = frame(closes)
+        m = run_theme.measure(df, 1.5)
+        self.assertAlmostEqual(m["收盤"], 75.0)
+        self.assertAlmostEqual(m["前一天最高"], 70.0)
+        self.assertTrue(m["止穩"])
+        self.assertLess(m["離60日線"], -0.15)
+        self.assertFalse(m["連續漲停"])
+
+
+class SectorPick(unittest.TestCase):
+    def test_pick_keeps_cheap_quiet_fallen_electronics_only(self):
+        import run_sector
+        q = lambda close, value=5e7: {"name": "x", "close": close, "value": value}  # noqa: E731
+        now = {"1111": q(40), "2222": q(40), "3333": q(90), "4444": q(40, 9e8), "5555": q(40), "6666": q(40), "0050": q(40)}
+        old = {"1111": q(60), "2222": q(42), "3333": q(150), "4444": q(60, 9e8), "5555": q(60), "6666": q(60), "0050": q(60)}
+        sector = {c: "半導體業" for c in now if c != "5555"}
+        mid = dict(old)
+        del mid["6666"]                                   # 中間那天沒有成交價
+        got = run_sector.pick(now, mid, old, sector, 70)
+        self.assertEqual([r["code"] for r in got], ["1111"], "跌不夠、太貴、成交值太大、不是電子業、缺資料、ETF 都要排除")
+        self.assertAlmostEqual(got[0]["drop"], 40 / 60 - 1)
+
+    def test_price_cap_is_part_of_cold_when_given(self):
+        import run_theme
+        m = {"收盤": 80.0, "均成交值億": 1.0, "連續漲停": False}
+        self.assertTrue(run_theme.is_cold(m))
+        self.assertFalse(run_theme.is_cold(m, 70))
+        self.assertTrue(run_theme.is_cold({**m, "收盤": 70.0}, 70))
+
+
+class CrashFilters(unittest.TestCase):
+    def test_market_state_and_filters_use_only_past_days(self):
+        """大盤狀態與濾網：只給前 250 天算出來的，要和給全部 300 天再取前 250 天的一樣。"""
+        import numpy as np
+        import run_crash
+        rng = np.random.default_rng(3)
+        make = lambda: frame(list(100 * np.exp(np.cumsum(rng.normal(0, 0.02, 300)))))  # noqa: E731
+        bench, stocks = make(), {"A": make(), "B": make()}
+        full = run_crash.market_state(stocks, bench)
+        part = run_crash.market_state({c: d.iloc[:250] for c, d in stocks.items()}, bench.iloc[:250])
+        pd.testing.assert_frame_equal(full.iloc[:250], part)
+        f_full, f_part = run_crash.filters(stocks["A"], full), run_crash.filters(stocks["A"].iloc[:250], part)
+        for name in f_full:
+            pd.testing.assert_series_equal(f_full[name].iloc[:250], f_part[name], check_names=False, obj=name)
+        below, above = f_full["0050 在 200 日線之下"], f_full["0050 在 200 日線之上"]
+        self.assertFalse((below & above).any(), "同一天不能既在線上又在線下")
+        self.assertTrue(below.iloc[210:].eq(~above.iloc[210:]).all())
 
 
 class NoLookAhead(unittest.TestCase):

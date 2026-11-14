@@ -1,4 +1,6 @@
-"""跑全部策略的回測並產生報告（只讀 data/ 快取，不連網、不呼叫任何 AI）：python run_backtest.py
+"""跑全部策略的回測並產生報告（只讀 data/ 快取，不連網、不呼叫任何 AI）：
+    python run_backtest.py            # 今天的熱門股名單（有後見之明，數字偏樂觀）
+    python run_backtest.py --asof     # 過去某一天的名單（python -m twstock_lab.fetch --asof 日期 抓的），驗證期沒有後見之明
 
 做法：
 1. 每個策略 × 每組參數 × 每種停損設定，在每一檔股票上模擬交易。
@@ -54,8 +56,9 @@ def nearest(base: Dict[int, Tuple[float, float]], days: float) -> Tuple[float, f
     return base[min(HORIZONS, key=lambda h: abs(h - days))]
 
 
-def run() -> pd.DataFrame:
-    frames, jumps = prep.load_all()
+def run(manifest_name: str = "manifest.json", suffix: str = "") -> pd.DataFrame:
+    manifest = prep.load_manifest(manifest_name)
+    frames, jumps = prep.load_all(manifest)
     bench = frames.pop(fetch.BENCHMARK, None)
     first = min(df.index[0] for df in frames.values())
     last = max(df.index[-1] for df in frames.values())
@@ -84,18 +87,20 @@ def run() -> pd.DataFrame:
         print(f"完成 {name}", flush=True)
     table = pd.DataFrame(rows)
     REPORTS.mkdir(exist_ok=True)
-    table.to_csv(REPORTS / "results.csv", index=False, encoding="utf-8-sig")
+    table.to_csv(REPORTS / f"results{suffix}.csv", index=False, encoding="utf-8-sig")
     meta = {
+        "名單日期": manifest.get("universe_date", manifest.get("fetched")), "名單檔數": len(manifest["stocks"]),
+        "名單說明": manifest.get("universe_note") or "成交值前幾名",
         "股票數": len(frames), "資料起": str(first.date()), "資料迄": str(last.date()), "切分日": str(TRAIN_END.date()),
         "組合數": len(table), "還原時接起來的異常跳空": jumps,
         "對照組_選": base_train, "對照組_驗": base_test,
         "0050_選": bt.buy_and_hold(bench, first, TRAIN_END) if bench is not None else {},
         "0050_驗": bt.buy_and_hold(bench, TRAIN_END, last) if bench is not None else {},
-        "個股買進抱著_驗_年化中位數%": round(float(np.median([bt.buy_and_hold(df, TRAIN_END, last).get("年化%", np.nan)
-                                                     for df in frames.values()])), 1),
+        "個股買進抱著_驗_年化中位數%": round(float(np.nanmedian([bt.buy_and_hold(df, TRAIN_END, last).get("年化%", np.nan)
+                                                        for df in frames.values()])), 1),
     }
-    (REPORTS / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
-    write_report(table, meta)
+    (REPORTS / f"meta{suffix}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1, default=float), encoding="utf-8")
+    write_report(table, meta, suffix)
     return table
 
 
@@ -107,7 +112,10 @@ def md_table(df: pd.DataFrame, cols: List[str]) -> str:
     return "\n".join(lines)
 
 
-def write_report(table: pd.DataFrame, meta: dict) -> None:
+def write_report(table: pd.DataFrame, meta: dict, suffix: str = "") -> None:
+    hindsight = str(meta["名單日期"]) > str(TRAIN_END.date())
+    note = meta.get("名單說明", "成交值前幾名")
+    universe_text = f"成交值前 {meta['名單檔數']} " if note == "成交值前幾名" else f"{note}的 {meta['名單檔數']} 檔"
     ok = table[table["選_筆數"] >= MIN_TRADES].copy()
     picked = ok.sort_values("選_贏對照%", ascending=False).head(8)
     by_win = ok.sort_values("選_勝率%", ascending=False).head(8)
@@ -117,9 +125,10 @@ def write_report(table: pd.DataFrame, meta: dict) -> None:
     beat = int((ok["驗_贏對照%"] > 0).sum())
     text = f"""# 台股技術策略回測報告
 
-- 資料：{meta['股票數']} 檔（{meta['資料迄']} 當天成交值前 150 的上市櫃普通股中，上市滿一年者），日線 {meta['資料起']} ～ {meta['資料迄']}，已用除權息參考價還原。
+- 股票名單：{meta['名單日期']} 當天{universe_text}的上市櫃普通股，其中 {meta['股票數']} 檔有足夠資料。{'**名單日期在驗證期之後，有後見之明。**' if hindsight else '**名單在驗證期開始前就定好，驗證期沒有後見之明。**'}
+- 日線 {meta['資料起']} ～ {meta['資料迄']}，已用除權息參考價還原。
 - 切分：{meta['切分日']} 以前用來挑策略，之後是策略沒看過的驗證期。
-- 共 {meta['組合數']} 個組合（9 種策略 × 參數 × 3 種停損設定），其中 {len(ok)} 個在挑選期交易滿 {MIN_TRADES} 筆。
+- 共 {meta['組合數']} 個組合（{table['策略'].nunique()} 種策略 × 參數 × 3 種停損設定），其中 {len(ok)} 個在挑選期交易滿 {MIN_TRADES} 筆。
 - 成本：手續費買賣各 0.1425%（未打折）、證交稅 0.3%、滑價買賣各 0.1%；隔天開盤成交；漲停買不到、跌停賣不掉。
 - 對照組：同一段期間、同一批股票，隨便哪天買進抱一樣久的平均結果。「贏對照」= 策略每筆平均 − 對照組平均。
 
@@ -156,15 +165,22 @@ def write_report(table: pd.DataFrame, meta: dict) -> None:
 
 ## 讀這份報告要知道的限制
 
-1. **股票範圍有後見之明**：用的是今天成交值最大的 150 檔，這些多半是過去幾年漲上來的股票，所以所有做多策略、連同對照組和個股買進抱著，數字都偏樂觀。要看的是策略有沒有贏過對照組，不是絕對報酬。
+1. **股票名單**：{'用的是驗證期結束時成交值最大的股票，這些多半是過去幾年漲上來的，所以所有做多策略、連同對照組和個股買進抱著，數字都偏樂觀，尤其對順勢策略有利。' if hindsight else '名單在驗證期開始前決定，驗證期的數字沒有名單造成的後見之明；挑選期仍然有（名單是挑選期結束時的熱門股）。之後下市或資料抓不到的股票不在內。'}要看的是策略有沒有贏過對照組，不是絕對報酬。
 2. **投組年化與最大回落是簡化算法**：資金分 10 等份、同一天訊號太多時照代號取，權益只在出場時更新，最大回落會比實際樂觀。
 3. **還原股價**：除權息用官方參考價還原；另有 {sum(meta['還原時接起來的異常跳空'].values())} 次隔夜跳空超過 11%（減資、分割等），以「當晚漲跌為 0」接起來。
 4. **沒算進去的**：處置股與全額交割限制、零股與流動性衝擊、當沖與融資融券、借券費。
 5. 過去的回測結果不代表未來會賺錢。
 """
-    (REPORTS / "REPORT.md").write_text(text, encoding="utf-8")
+    (REPORTS / f"REPORT{suffix}.md").write_text(text, encoding="utf-8")
 
 
 if __name__ == "__main__":
-    result = run()
-    print(f"寫出 {REPORTS / 'REPORT.md'}，共 {len(result)} 個組合")
+    import sys
+
+    asof = "--asof" in sys.argv
+    if "--small" in sys.argv:      # 冷門股名單（python -m twstock_lab.fetch --asof 2023-12-29 --small 抓的）
+        result = run("manifest_small.json", "_small")
+        print(f"寫出 reports/REPORT_small.md，共 {len(result)} 個組合")
+        raise SystemExit(0)
+    result = run("manifest_asof.json", "_asof") if asof else run()
+    print(f"寫出 reports/REPORT{'_asof' if asof else ''}.md，共 {len(result)} 個組合")

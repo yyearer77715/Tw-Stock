@@ -1,0 +1,29 @@
+{
+  "name": "AI 概念（中小型、冷門）",
+  "updated": "2026-11-14",
+  "note": "名單來自 2026-11-14 的網路搜尋，分級是照搜尋到的報導粗分，沒有逐一查證營收占比。A = 報導說營收已經來自這個題材；B = 有相關但占比小或還在送樣；C = 題材是市場推論，公司沒有公開的訂單或營收佐證。",
+  "stocks": [
+    {"code": "6127", "name": "九豪", "grade": "B", "role": "晶片電阻用陶瓷基板；氮化鋁基板切入光通訊 / CPO 散熱，仍在送樣，2026 年初營收年減", "source": "https://www.moneyweekly.com.tw/_Article?AID=230990"},
+    {"code": "8240", "name": "華宏", "grade": "C", "role": "光電材料為主；熱導材料事業群建廠中，和 AI 伺服器的連結是間接的，前三季獲利年減", "source": "https://blog.fugle.tw/post/earnings-call-8240-2025-12-16"},
+    {"code": "3624", "name": "光頡", "grade": "B", "role": "精密薄膜電阻，受惠 AI 邊緣裝置，薄膜電感調漲報價", "source": "https://money.udn.com/money/story/5607/9122695"},
+    {"code": "6173", "name": "信昌電", "grade": "B", "role": "被動元件（AI 伺服器被動元件用量增加）", "source": "https://money.udn.com/money/story/5607/9122695"},
+    {"code": "3707", "name": "漢磊", "grade": "C", "role": "被動元件 / 功率元件報導中被一起點名，關聯沒有細節", "source": "https://money.udn.com/money/story/5607/9122695"},
+    {"code": "6182", "name": "合晶", "grade": "C", "role": "矽晶圓，報導中被一起點名，關聯沒有細節", "source": "https://money.udn.com/money/story/5607/9122695"},
+    {"code": "3483", "name": "力致", "grade": "B", "role": "散熱模組，液冷供應鏈", "source": "https://www.businessweekly.com.tw/business/blog/3021636"},
+    {"code": "3338", "name": "泰碩", "grade": "B", "role": "散熱模組，液冷供應鏈", "source": "https://www.businessweekly.com.tw/business/blog/3021636"},
+    {"code": "8996", "name": "高力", "grade": "A", "role": "熱交換器，液冷散熱", "source": "https://www.businessweekly.com.tw/business/blog/3021636"},
+    {"code": "3013", "name": "晟銘電", "grade": "B", "role": "伺服器機殼，液冷機櫃", "source": "https://www.businessweekly.com.tw/business/blog/3021636"},
+    {"code": "6831", "name": "邁科", "grade": "B", "role": "散熱，液冷產品預計 2026 下半年量產", "source": "https://www.businessweekly.com.tw/business/blog/3021636"},
+    {"code": "6805", "name": "富世達", "grade": "A", "role": "液冷快接頭，GB300 用量增加", "source": "https://www.pocket.tw/school/articles/7940/"},
+    {"code": "6230", "name": "尼得科超眾", "grade": "A", "role": "散熱模組", "source": "https://www.pocket.tw/school/articles/7940/"},
+    {"code": "2421", "name": "建準", "grade": "A", "role": "散熱風扇", "source": "https://www.pocket.tw/school/articles/7940/"},
+    {"code": "6213", "name": "聯茂", "grade": "A", "role": "銅箔基板（CCL）", "source": "https://www.esunsec.com.tw/article/post/197"},
+    {"code": "6672", "name": "騰輝電子-KY", "grade": "B", "role": "銅箔基板（CCL）", "source": "https://www.esunsec.com.tw/article/post/197"},
+    {"code": "8358", "name": "金居", "grade": "A", "role": "電解銅箔（PCB 上游）", "source": "https://www.esunsec.com.tw/article/post/197"},
+    {"code": "1815", "name": "富喬", "grade": "B", "role": "低介電玻纖布，獲 CCL 大廠認證", "source": "https://technews.tw/2025/09/05/2025-ai-server-material-upgrade/"},
+    {"code": "1802", "name": "台玻", "grade": "B", "role": "低介電玻纖布，獲 CCL 大廠認證", "source": "https://technews.tw/2025/09/05/2025-ai-server-material-upgrade/"},
+    {"code": "3605", "name": "宏致", "grade": "B", "role": "連接器", "source": "https://penchan.co/market/ai/supply-chain/ai-server-stocks/"},
+    {"code": "3533", "name": "嘉澤", "grade": "A", "role": "連接器（CPU 插槽）", "source": "https://penchan.co/market/ai/supply-chain/ai-server-stocks/"},
+    {"code": "3693", "name": "營邦", "grade": "A", "role": "伺服器機殼", "source": "https://penchan.co/market/ai/supply-chain/ai-server-stocks/"}
+  ]
+}

@@ -17,6 +17,14 @@ python run_backtest.py
 python -m unittest discover -s tests
 ```
 
+單一個股體檢（技術面、月營收、法人、融資、分點買賣超，並檢查回測驗證過的進場條件）：
+
+```bash
+python stock_check.py 2495      # 或 python stock_check.py 普安
+```
+
+這支體檢也包成記憶中樞的全域技能 `tw-stock-check`，任何專案的 session 都能用。改了 `stock_check.py` 或 `twstock_lab/` 之後跑 `bash export_skill.sh` 把程式複製過去，再 `hub_cli.py sync`。資料位置可用環境變數 `TWSTOCK_DATA_DIR` 指定（預設是本專案的 `data/`）。
+
 結果在 `reports/REPORT.md`（摘要）與 `reports/results.csv`（全部組合）。
 
 抓資料用的是記憶中樞的 `gentle-fetch` 技能（`~/.claude/ai-memory-hub/skills/gentle-fetch/scripts/gentle_fetch.py`）；放在別處時設定環境變數 `GENTLE_FETCH_DIR`。
@@ -27,7 +35,7 @@ python -m unittest discover -s tests
 |---|---|
 | `twstock_lab/fetch.py` | 選股票範圍（成交值前 150 檔上市櫃普通股）、抓日線與除權息資料 |
 | `twstock_lab/prep.py` | 把原始資料整理成日線表，用除權息參考價還原股價 |
-| `twstock_lab/strategies.py` | 技術指標與 9 種策略（均線交叉、通道突破、帶量突破、RSI 拉回、KD、MACD、布林下軌、布林突破、均線拉回） |
+| `twstock_lab/strategies.py` | 技術指標與 12 種策略（均線交叉、通道突破、帶量突破、RSI 拉回、KD、MACD、布林下軌、布林突破、均線拉回、乖離率、K 線型態、DMI） |
 | `twstock_lab/backtest.py` | 回測引擎：隔天開盤成交、手續費、證交稅、滑價、漲跌停、停損、統計 |
 | `run_backtest.py` | 跑全部組合，切成挑選期與驗證期，和對照組比較，寫報告 |
 | `tests/test_backtest.py` | 引擎、還原股價、「策略不偷看未來」的測試 |

@@ -1,3 +1,13 @@
+# precommit audit（2026-11-14 新題材名單 themes/cpo.json 與掃描報告 reports/THEME_cpo.md）
+- 變更範圍：只新增名單檔與報告，程式沒有改。
+- 資料鏈檢查：
+  - ✔ 18 檔的代號都用 stock_check.find_stock 以名稱對過，唯一對到（富采對不到，沒有放進名單）。
+  - ✔ 18 檔都掃到，近四季每股盈餘都有抓到（FinMind 只重試、沒有放棄的）。
+  - ⚠ 名單來自網路搜尋，報導多在 2026 年 3～10 月；分級照報導粗分。影片說「載板廠傻眼」，但搜尋到的報導是輝達支持欣興擴產，方向不同，名單的 role 欄有寫。
+  - ⚠ 這個題材沒有一檔算冷門（成交值都大或近期連續漲停過）。
+- 驗證：python run_theme.py cpo 實跑；tests 24 個全過（程式沒改）。
+- 未驗證：題材影片的說法沒有找到原始出處。
+
 # precommit audit（2026-11-14 run_sector.py：全市場粗篩電子產業低價冷門股；run_theme.py 加股價上限）
 - 變更範圍：run_sector.py（新）、themes/elec-cheap.json（新，粗篩出的 40 檔）、run_theme.py（is_cold / run / write_report 多一個可省略的 max_price，表格多「價格內」欄）、reports/THEME_ai-cold.md（用 70 元重跑）、tests（22 → 24）。
 - 呼叫鏈：run_sector.main → industries（證交所、櫃買公司產業別）→ quotes × 3 天（fetch.TWSE_DAY / TPEX_DAY，和 universe_asof 同一組網址）→ pick → themes/elec-cheap.json → run_theme.run（沒有改流程）。

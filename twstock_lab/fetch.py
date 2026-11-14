@@ -70,7 +70,7 @@ def universe(f: GentleFetcher, top: int = 150) -> List[Dict[str, object]]:
     return rows[:top]
 
 
-def universe_asof(f: GentleFetcher, day: date, top: int = 150) -> List[Dict[str, object]]:
+def universe_asof(f: GentleFetcher, day: date, top: int = 150, value_range: tuple | None = None) -> List[Dict[str, object]]:
     """用「過去某一天」的成交值選前 top 檔。拿這份名單回測那一天之後的表現，名單本身就沒有後見之明。"""
     rows: List[Dict[str, object]] = []
     twse = json.loads(f.get(TWSE_DAY.format(ymd=day.strftime("%Y%m%d"))))
@@ -88,6 +88,11 @@ def universe_asof(f: GentleFetcher, day: date, top: int = 150) -> List[Dict[str,
             rows += [{"code": r[c], "name": str(r[n]).strip(), "market": "tpex", "value": _number(r[v])}
                      for r in table["data"] if is_common_stock(r[c])]
     rows.sort(key=lambda r: -float(r["value"]))
+    if value_range:                       # 冷門股：成交值落在這個範圍的，照成交值排序後等距取 top 檔
+        low, high = value_range
+        rows = [r for r in rows if low <= float(r["value"]) < high]
+        step = max(len(rows) / top, 1)
+        return [rows[int(i * step)] for i in range(min(top, len(rows)))]
     return rows[:top]
 
 
@@ -100,16 +105,17 @@ def exdiv_urls(start_year: int, end_year: int) -> Dict[str, List[str]]:
     return {"twse": [TWSE_EXDIV.format(y=y) for y in years], "tpex": [TPEX_EXDIV.format(y=y) for y in years]}
 
 
-def fetch_all(top: int = 150, years: int = 8, asof: date | None = None) -> Dict[str, object]:
+def fetch_all(top: int = 150, years: int = 8, asof: date | None = None, value_range: tuple | None = None) -> Dict[str, object]:
     """抓齊回測要的資料並寫 manifest（之後的步驟只讀快取，不再連網）。被某個網站拒絕就停抓那個網站並記下來。
     asof 有給：改用那一天的成交值選股，寫 data/manifest_asof.json；已經抓過的股票直接用快取。"""
     f = fetcher()
     today = date.today()
     start = f"{today.year - years}-{today.month:02d}-01"
-    stocks = universe_asof(f, asof, top) if asof else universe(f, top)
-    out_file = DATA / ("manifest_asof.json" if asof else "manifest.json")
+    stocks = universe_asof(f, asof, top, value_range) if asof else universe(f, top)
+    out_file = DATA / ("manifest_small.json" if value_range else "manifest_asof.json" if asof else "manifest.json")
     manifest: Dict[str, object] = {"fetched": today.isoformat(), "start": start, "stocks": stocks,
                                    "universe_date": (asof or today).isoformat(),
+                                   "universe_note": "成交值 0.1～3 億的冷門股，照成交值排序後等距取樣" if value_range else "",
                                    "prices": {}, "exdiv": {"twse": [], "tpex": []}, "failed": []}
     failed: List[str] = manifest["failed"]  # type: ignore[assignment]
     for market, urls in exdiv_urls(today.year - years, today.year).items():
@@ -181,11 +187,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="抓回測用的資料（溫和抓取）")
     parser.add_argument("--asof", help="用這一天（YYYY-MM-DD）的成交值選股，名單沒有後見之明")
     parser.add_argument("--dataset", help="只抓 FinMind 的另一個資料集（例如 TaiwanStockInstitutionalInvestorsBuySell），對象是 manifest_asof.json 的股票")
+    parser.add_argument("--small", action="store_true", help="配合 --asof：改選那一天成交值 0.1～3 億的冷門股，等距取 150 檔，寫 manifest_small.json")
     args = parser.parse_args()
     if args.dataset:
         print(fetch_dataset(args.dataset))
         raise SystemExit(0)
-    result = fetch_all(asof=date.fromisoformat(args.asof) if args.asof else None)
+    if args.small and not args.asof:
+        raise SystemExit("--small 要配合 --asof 用")
+    result = fetch_all(asof=date.fromisoformat(args.asof) if args.asof else None, value_range=(1e7, 3e8) if args.small else None)
     print(f"完成：股價 {len(result['prices'])} 檔、除權息 {sum(len(v) for v in result['exdiv'].values())} 份、失敗 {len(result['failed'])} 筆")
     for line in result["failed"]:
         print("  失敗：", line)

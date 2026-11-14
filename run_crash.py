@@ -59,8 +59,17 @@ def filters(df: pd.DataFrame, market: pd.DataFrame) -> Dict[str, pd.Series]:
     }
 
 
-def run() -> pd.DataFrame:
-    frames, _ = prep.load_all(prep.load_manifest("manifest_asof.json"))
+UNIVERSES = {
+    "": ("manifest_asof.json", "2023-12-29 成交值前 150 檔"),
+    "small": ("manifest_small.json", "2023-12-29 成交值 0.1～3 億的冷門股，照成交值排序後等距取 150 檔"),
+}
+
+
+def run(universe: str = "") -> pd.DataFrame:
+    """universe = "small" 改用冷門股名單（先跑 python -m twstock_lab.fetch --asof 2023-12-29 --small），報告檔名加 _small。"""
+    manifest_name, universe_text = UNIVERSES[universe]
+    suffix = f"_{universe}" if universe else ""
+    frames, _ = prep.load_all(prep.load_manifest(manifest_name))
     bench = frames.pop(fetch.BENCHMARK)
     market = market_state(frames, bench)
     first, last = min(df.index[0] for df in frames.values()), max(df.index[-1] for df in frames.values())
@@ -90,15 +99,15 @@ def run() -> pd.DataFrame:
                 rows.append(row)
     table = pd.DataFrame(rows)
     REPORTS.mkdir(exist_ok=True)
-    table.to_csv(REPORTS / "crash.csv", index=False, encoding="utf-8-sig")
+    table.to_csv(REPORTS / f"crash{suffix}.csv", index=False, encoding="utf-8-sig")
     cols = ["策略", "條件", "選_筆數", "選_勝率%", "選_贏對照%", "驗_筆數", "驗_勝率%", "驗_每筆平均%", "驗_贏對照%", "驗_平均賠%",
             "驗_最慘一筆%", "驗_賠超過20%的比例%"]
     lines = ["| " + " | ".join(c.replace("_", " ") for c in cols) + " |", "|" + "---|" * len(cols)]
     for _, r in table.iterrows():
         lines.append("| " + " | ".join("" if pd.isna(r.get(c)) else str(r.get(c)) for c in cols) + " |")
-    (REPORTS / "CRASH.md").write_text(f"""# 逢低訊號遇到大跌時，先等哪種條件
+    (REPORTS / f"CRASH{suffix}.md").write_text(f"""# 逢低訊號遇到大跌時，先等哪種條件
 
-- 名單：2023-12-29 成交值前 150 檔；挑選期到 {rb.TRAIN_END.date()}，之後是驗證期。
+- 名單：{universe_text}（實際有資料的 {len(frames)} 檔）；挑選期到 {rb.TRAIN_END.date()}，之後是驗證期。
 - 政治、戰爭這類事件沒辦法預測，這裡測的是「市場已經在反應」時的幾種判斷方式。條件只用訊號當天收盤以前的資料，進場是隔天開盤。
 - 加條件 = 等到條件也成立那天才進場，各組不是把同一批交易切開，筆數相加會超過「不加條件」。
 - 「贏對照」= 每筆平均 − 同期間隨便買抱一樣久的平均。條件是跑之前就寫在程式裡的 8 個，沒有事後加。
@@ -114,7 +123,8 @@ def run() -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    result = run()
+    import sys
+    result = run(sys.argv[1] if len(sys.argv) > 1 else "")
     pd.set_option("display.width", 280)
     pd.set_option("display.unicode.east_asian_width", True)
     cols = ["策略", "條件", "選_贏對照%", "驗_筆數", "驗_勝率%", "驗_每筆平均%", "驗_贏對照%", "驗_平均賠%", "驗_最慘一筆%", "驗_賠超過20%的比例%"]

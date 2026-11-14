@@ -32,7 +32,7 @@ BROAD = 0.10            # 名單裡跌深的股票超過這個比例算全面大
 LIMIT_UP = 0.095
 
 
-def measure(df: pd.DataFrame, eps_ttm: Optional[float]) -> Dict[str, object]:
+def measure(df: pd.DataFrame, eps_ttm: Optional[float], op_ttm: Optional[float] = None) -> Dict[str, object]:
     """一檔股票今天的狀態。df 是還原後的日線。"""
     c = df["close"]
     ma20, ma60 = st.sma(c, 20), st.sma(c, 60)
@@ -49,6 +49,7 @@ def measure(df: pd.DataFrame, eps_ttm: Optional[float]) -> Dict[str, object]:
         "止穩": bool(c.iloc[-1] > df["high"].iloc[-2]),
         "量縮止跌": bool(dry.iloc[-1]),
         "近四季EPS": eps_ttm,
+        "近四季本業億": op_ttm,
     }
 
 
@@ -69,6 +70,12 @@ def advice(m: Dict[str, object], broad: bool) -> Dict[str, str]:
                 "理由": f"近四季每股盈餘 {m['近四季EPS']:.2f} 元。回測裡表現最差的就是「只有它自己跌」的股票（輸對照組 0.88 個百分點、6.6% 的交易賠超過 20%），"
                         "虧損股跌深多半是公司自己的問題。",
                 "看錯的訊號": "如果之後單季轉盈、營收年增轉正，再重新看。"}
+    if m.get("近四季本業億") is not None and m["近四季本業億"] < 0:
+        return {"狀態": "不建議",
+                "進場條件": "沒有。公司近四季的本業（營業利益）是虧損的，價格條件成立也不列為進場點。",
+                "理由": f"近四季營業利益合計 {m['近四季本業億']:.1f} 億元，帳面有獲利是靠業外。業外收益不穩定，本業虧損的公司跌深多半是自己的問題"
+                        "（回測裡「只有它自己跌」那組輸對照組 0.88 個百分點）。",
+                "看錯的訊號": "如果之後單季營業利益轉正、營收年增轉正，再重新看。"}
     if deep and not broad:
         return {"狀態": "不建議（個別下跌）",
                 "進場條件": "沒有。等大盤也出現全面性下跌、或它自己止穩後再重新掃描。",
@@ -114,14 +121,20 @@ def load_stock(code: str) -> pd.DataFrame:
     return df
 
 
-def eps_ttm(code: str) -> Optional[float]:
-    """近四季每股盈餘合計；抓不到（額度用完、沒有資料）回 None。"""
+def ttm(rows: list, kind: str) -> Optional[float]:
+    """季財報裡某個科目最近四季的合計；不滿四季回 None。"""
+    values = pd.DataFrame(rows).query("type == @kind").sort_values("date")["value"] if rows else []
+    return float(values.tail(4).sum()) if len(values) >= 4 else None
+
+
+def fundamentals(code: str) -> tuple:
+    """(近四季每股盈餘, 近四季營業利益億元)；抓不到（額度用完、沒有資料）兩個都回 None。"""
     try:
         rows = stock_check.finmind(fetch.fetcher(), "TaiwanStockFinancialStatements", code, f"{pd.Timestamp.today().year - 3}-01-01")
-        eps = pd.DataFrame(rows).query("type == 'EPS'").sort_values("date")["value"]
-        return float(eps.tail(4).sum()) if len(eps) >= 4 else None
     except Exception:  # noqa: BLE001
-        return None
+        return None, None
+    operating = ttm(rows, "OperatingIncome")
+    return ttm(rows, "EPS"), None if operating is None else operating / 1e8
 
 
 def run(theme: str, max_price: Optional[float] = None) -> List[dict]:
@@ -137,7 +150,7 @@ def run(theme: str, max_price: Optional[float] = None) -> List[dict]:
         if df.index[-1] != market["日期"] or len(df) < 250:
             print(f"略過 {s['code']} {s['name']}：資料只到 {df.index[-1].date()} 或上市不滿一年", file=sys.stderr)
             continue
-        m = measure(df, eps_ttm(s["code"]))
+        m = measure(df, *fundamentals(s["code"]))
         rows.append({**s, **m, "冷門": is_cold(m, max_price), "價格內": max_price is None or m["收盤"] <= max_price, **advice(m, market["全面大跌"])})
     order = {"符合進場條件": 0, "等止穩": 1, "還沒到條件": 2, "沒有驗證過的買點": 3, "不建議（個別下跌）": 4, "不建議": 5}
     rows.sort(key=lambda r: (not r["冷門"], not r["價格內"], order[r["狀態"]], r["離60日線"]))
@@ -147,6 +160,7 @@ def run(theme: str, max_price: Optional[float] = None) -> List[dict]:
 
 def block(r: dict) -> str:
     eps = "抓不到" if r["近四季EPS"] is None else f"{r['近四季EPS']:.2f} 元"
+    eps += "" if r["近四季本業億"] is None else f"、營業利益 {r['近四季本業億']:.1f} 億"
     return f"""### {r['code']} {r['name']}（分級 {r['grade']}）— {r['狀態']}
 - 和題材的關係：{r['role']}（[出處]({r['source']})）
 - 現況：收盤 {r['收盤']:.1f}｜離 60 日線 {100 * r['離60日線']:+.1f}%｜近 5 日 {100 * r['近5日']:+.1f}%、近 20 日 {100 * r['近20日']:+.1f}%｜離 250 日高點 {100 * r['離250日高']:+.1f}%｜近 20 日平均成交值 {r['均成交值億']:.1f} 億｜近四季每股盈餘 {eps}
@@ -182,7 +196,8 @@ if __name__ == "__main__":
     result = run(sys.argv[1], float(sys.argv[2]) if len(sys.argv) == 3 else None)
     table = pd.DataFrame([{"代號": r["code"], "名稱": r["name"], "分級": r["grade"], "冷門": "是" if r["冷門"] else "", "價格內": "是" if r["價格內"] else "", "狀態": r["狀態"],
                            "收盤": round(r["收盤"], 1), "離60日線%": round(100 * r["離60日線"], 1), "近5日%": round(100 * r["近5日"], 1),
-                           "均成交值億": round(r["均成交值億"], 1), "近四季EPS": r["近四季EPS"] if r["近四季EPS"] is None else round(r["近四季EPS"], 2)}
+                           "均成交值億": round(r["均成交值億"], 1), "近四季EPS": r["近四季EPS"] if r["近四季EPS"] is None else round(r["近四季EPS"], 2),
+                           "本業億": r["近四季本業億"] if r["近四季本業億"] is None else round(r["近四季本業億"], 1)}
                           for r in result])
     pd.set_option("display.width", 220)
     pd.set_option("display.unicode.east_asian_width", True)

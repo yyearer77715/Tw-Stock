@@ -90,6 +90,7 @@ def run(manifest_name: str = "manifest.json", suffix: str = "") -> pd.DataFrame:
     table.to_csv(REPORTS / f"results{suffix}.csv", index=False, encoding="utf-8-sig")
     meta = {
         "名單日期": manifest.get("universe_date", manifest.get("fetched")), "名單檔數": len(manifest["stocks"]),
+        "名單說明": manifest.get("universe_note") or "成交值前幾名",
         "股票數": len(frames), "資料起": str(first.date()), "資料迄": str(last.date()), "切分日": str(TRAIN_END.date()),
         "組合數": len(table), "還原時接起來的異常跳空": jumps,
         "對照組_選": base_train, "對照組_驗": base_test,
@@ -113,6 +114,8 @@ def md_table(df: pd.DataFrame, cols: List[str]) -> str:
 
 def write_report(table: pd.DataFrame, meta: dict, suffix: str = "") -> None:
     hindsight = str(meta["名單日期"]) > str(TRAIN_END.date())
+    note = meta.get("名單說明", "成交值前幾名")
+    universe_text = f"成交值前 {meta['名單檔數']} " if note == "成交值前幾名" else f"{note}的 {meta['名單檔數']} 檔"
     ok = table[table["選_筆數"] >= MIN_TRADES].copy()
     picked = ok.sort_values("選_贏對照%", ascending=False).head(8)
     by_win = ok.sort_values("選_勝率%", ascending=False).head(8)
@@ -122,7 +125,7 @@ def write_report(table: pd.DataFrame, meta: dict, suffix: str = "") -> None:
     beat = int((ok["驗_贏對照%"] > 0).sum())
     text = f"""# 台股技術策略回測報告
 
-- 股票名單：{meta['名單日期']} 當天成交值前 {meta['名單檔數']} 的上市櫃普通股，其中 {meta['股票數']} 檔有足夠資料。{'**名單日期在驗證期之後，有後見之明。**' if hindsight else '**名單在驗證期開始前就定好，驗證期沒有後見之明。**'}
+- 股票名單：{meta['名單日期']} 當天{universe_text}的上市櫃普通股，其中 {meta['股票數']} 檔有足夠資料。{'**名單日期在驗證期之後，有後見之明。**' if hindsight else '**名單在驗證期開始前就定好，驗證期沒有後見之明。**'}
 - 日線 {meta['資料起']} ～ {meta['資料迄']}，已用除權息參考價還原。
 - 切分：{meta['切分日']} 以前用來挑策略，之後是策略沒看過的驗證期。
 - 共 {meta['組合數']} 個組合（{table['策略'].nunique()} 種策略 × 參數 × 3 種停損設定），其中 {len(ok)} 個在挑選期交易滿 {MIN_TRADES} 筆。
@@ -175,5 +178,9 @@ if __name__ == "__main__":
     import sys
 
     asof = "--asof" in sys.argv
+    if "--small" in sys.argv:      # 冷門股名單（python -m twstock_lab.fetch --asof 2023-12-29 --small 抓的）
+        result = run("manifest_small.json", "_small")
+        print(f"寫出 reports/REPORT_small.md，共 {len(result)} 個組合")
+        raise SystemExit(0)
     result = run("manifest_asof.json", "_asof") if asof else run()
     print(f"寫出 reports/REPORT{'_asof' if asof else ''}.md，共 {len(result)} 個組合")

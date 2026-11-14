@@ -181,6 +181,23 @@ class ThemeAdvice(unittest.TestCase):
         self.assertIn("-2.00", out["理由"])
         self.assertEqual(self.advice(止穩=True, 近四季EPS=None)["狀態"], "符合進場條件", "抓不到財報時不當成虧損")
 
+    def test_operating_loss_is_never_an_entry_even_with_positive_eps(self):
+        out = self.advice(止穩=True, 近四季EPS=1.7, 近四季本業億=-13.6)
+        self.assertEqual(out["狀態"], "不建議")
+        self.assertIn("-13.6", out["理由"])
+        self.assertEqual(self.advice(止穩=True, 近四季本業億=2.0)["狀態"], "符合進場條件")
+        self.assertEqual(self.advice(止穩=True, 近四季本業億=None)["狀態"], "符合進場條件", "抓不到財報時不當成虧損")
+
+    def test_ttm_sums_the_last_four_quarters_of_one_item(self):
+        import run_theme
+        rows = [{"date": f"2025-{m:02d}-30", "type": kind, "value": v}
+                for m, v in ((3, 1.0), (6, 2.0), (9, 3.0), (12, 4.0)) for kind in ("EPS", "OperatingIncome")]
+        rows.insert(0, {"date": "2024-12-30", "type": "EPS", "value": 100.0})
+        self.assertAlmostEqual(run_theme.ttm(rows, "EPS"), 10.0)
+        self.assertAlmostEqual(run_theme.ttm(rows, "OperatingIncome"), 10.0)
+        self.assertIsNone(run_theme.ttm(rows[:3], "OperatingIncome"), "不滿四季不算")
+        self.assertIsNone(run_theme.ttm([], "EPS"))
+
     def test_cold_means_small_turnover_and_no_consecutive_limit_ups(self):
         import run_theme
         self.assertTrue(run_theme.is_cold(self.BASE))

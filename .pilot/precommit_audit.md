@@ -1,3 +1,15 @@
+# precommit audit（2026-11-14 題材掃描加本業虧損檢查；回測與大跌濾網可指定冷門股名單）
+- 變更範圍：run_theme.py（eps_ttm 換成 ttm + fundamentals，measure / advice 多「近四季本業億」，本業虧損一律不建議）；twstock_lab/fetch.py（universe_asof / fetch_all 多 value_range，CLI 加 --small，寫 manifest_small.json 與 universe_note）；run_crash.py（run 多 universe 參數，small → CRASH_small.md）；run_backtest.py（--small → REPORT_small.md，報告的名單說明改讀 manifest）；三份 THEME 報告重跑；tests（24 → 26）。
+- 呼叫鏈：run_theme.run → fundamentals → stock_check.finmind（季財報，同一個網址，有快取）→ ttm（EPS、OperatingIncome）→ measure → advice。fetch.fetch_all(value_range) → universe_asof（過濾成交值範圍、等距取樣）→ manifest_small.json → run_backtest.run / run_crash.run。
+- 資料鏈檢查：
+  - ✔ 判斷順序：每股盈餘虧損 → 本業虧損 → 價格條件；兩個都抓不到（None）時不當成虧損，測試涵蓋。
+  - ✔ 營業利益單位：FinMind 是元，fundamentals 除以 1e8 變億元，報告與理由都寫「億」。威盛實測 −13.6 億，和先前體檢「連 7 季營業虧損」一致。
+  - ✔ 不帶新參數時舊行為不變：run_backtest.py --asof 重跑，REPORT_asof.md 只差名單說明那一行的寫法（文字相同）；run_crash.py 重跑數字相同，只有名單那行多了「實際有資料的 150 檔」。
+  - ✔ universe_asof 不給 value_range 時仍回成交值前 150（實測第一檔 2382）；給 (1e7, 3e8) 時回 150 檔、成交值由 2.99 億到 0.10 億、中位數 0.40 億。
+  - ⚠ 冷門股名單是用 2023-12-29 單一天的成交值選的，那天剛好爆量或沒量的股票會被分錯類；好處是沒有後見之明。
+- 驗證：tests 26 個全過；三份題材重掃：威盛從「符合進場條件」變「不建議」，elec-cheap 的不建議從 8 檔變 10 檔。
+- 未驗證：manifest_small.json 的股價還在背景抓，REPORT_small.md / CRASH_small.md 還沒產生。
+
 # precommit audit（2026-11-14 電子低價冷門股 40 檔的掃描報告 reports/THEME_elec-cheap.md）
 - 變更範圍：只新增報告，程式與名單檔沒有改。
 - 資料鏈檢查：

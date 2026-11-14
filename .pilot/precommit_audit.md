@@ -1,3 +1,17 @@
+# precommit audit（2026-11-14 八種新技術方法、大跌濾網 run_crash.py、隔日沖分點 run_daytrade.py）
+- 變更範圍：twstock_lab/strategies.py（新增 williams_dip、cci_cross、sar_flip、obv_breakout、gap_up、granville、ichimoku、dry_up_low，CATALOG 12 → 20 種）；run_crash.py（新）；run_daytrade.py（新，分點資料還在抓，analyse 還沒跑過真資料）；tests（14 → 17）；reports/REPORT_asof.md、results_asof.csv、meta_asof.json（重跑，87 → 129 個組合）、reports/CRASH.md、crash.csv。
+- 呼叫鏈：run_backtest.run → CATALOG 每個函式 → backtest.simulate（沒改）；run_crash.run → prep.load_all → market_state（0050 與全名單）→ filters → simulate → stats → run_backtest.baseline / nearest；run_daytrade.events → do_fetch（GentleFetcher、三個來源輪流）→ analyse → fubon_parse.parse_summary → flips / daytrade_share / forward_return。
+- 資料鏈檢查：
+  - ✔ 不偷看未來：新策略都由既有的 NoLookAhead 測試逐一檢查（CATALOG 全部參數）；SAR 是逐日往前算；一目均衡表的雲層是 26 天前的值往後移。大盤狀態與 8 個濾網另有測試（前 250 天算的 = 全部算再取前 250 天）。
+  - ✔ 舊策略數字沒變：乖離率 60 / 0.15 不停損仍是 522 筆、74.7%、+8.54%、贏對照 4.51，和上一版報告一致。
+  - ✔ 修掉兩個自己寫的錯：「0050 在 200 日線之下」原本對含缺值的布林欄取反，結果整欄為真、數字和「不加條件」一模一樣，改成先轉布林、且均線還沒算出來的日子不算線下；量縮止跌配「當天收紅」不可能成立，空的列不寫進報告。
+  - ✔ 成本一致：forward_return 用 backtest 的手續費、證交稅、滑價與漲停門檻常數。
+  - ✔ 隔日沖的門檻（漲 7%、至少上榜 8 次、五成倒貨、佔比 20%、認定期到 2025-06-30）都在抓資料前寫在程式開頭。
+  - ⚠ 加條件 = 等條件成立才進場，各組不是切開同一批交易；8 個條件 × 2 個策略同時比，有運氣成分。
+  - ⚠ 事件 3,571 個等距取樣 600 個；分點排行只有前 15 名，倒貨比例是低估。
+- 驗證：tests 17 個全過；run_backtest.py --asof 28 秒跑完；run_crash.py 可重跑；run_daytrade.py 試抓一個事件（3260，2025-12-24 與隔天）兩頁都解析出 15 名買賣超。
+- 未驗證：run_daytrade.py 的 analyse 要等 1,200 頁抓完；沒有統計檢定；濾網還沒放進每日結算的投組。
+
 # precommit audit（2026-11-13 法人籌碼條件回測結果：reports/CHIPS.md、chips.csv）
 - 變更範圍：只新增兩個報告檔，run_chips.py 沒有改。
 - 資料鏈檢查：

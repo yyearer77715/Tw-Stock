@@ -128,6 +128,43 @@ class BranchConcentration(unittest.TestCase):
         self.assertTrue(url.endswith("a=4931&e=2024-8-1&f=2024-8-5"))
 
 
+class DayTradeBranches(unittest.TestCase):
+    def test_flip_needs_next_day_selling_of_at_least_half(self):
+        import run_daytrade as dt
+        buys = [{"name": "甲", "net": 100.0}, {"name": "乙", "net": 100.0}, {"name": "丙", "net": 100.0}]
+        sells = [{"name": "甲", "net": -60.0}, {"name": "乙", "net": -40.0}]
+        self.assertEqual(dt.flips(buys, sells), {"甲": True, "乙": False, "丙": False})
+        self.assertAlmostEqual(dt.daytrade_share(buys, {"甲"}), 1 / 3)
+        self.assertIsNone(dt.daytrade_share([], {"甲"}))
+
+    def test_forward_return_buys_next_open_and_skips_limit_up(self):
+        import run_daytrade as dt
+        df = frame([100, 100, 100, 110, 110])
+        cost = (1 - bt.SLIPPAGE) * (1 - bt.FEE - bt.TAX) / ((1 + bt.SLIPPAGE) * (1 + bt.FEE))
+        self.assertAlmostEqual(dt.forward_return(df, 0, 2), 1.1 * cost - 1)   # 第 1 天開盤 100 買、第 3 天開盤 110 賣
+        self.assertIsNone(dt.forward_return(df, 3, 5), "資料不夠長就不算")
+        self.assertIsNone(dt.forward_return(frame([100, 110, 110, 110]), 0, 1), "隔天開盤漲停買不到")
+
+
+class CrashFilters(unittest.TestCase):
+    def test_market_state_and_filters_use_only_past_days(self):
+        """大盤狀態與濾網：只給前 250 天算出來的，要和給全部 300 天再取前 250 天的一樣。"""
+        import numpy as np
+        import run_crash
+        rng = np.random.default_rng(3)
+        make = lambda: frame(list(100 * np.exp(np.cumsum(rng.normal(0, 0.02, 300)))))  # noqa: E731
+        bench, stocks = make(), {"A": make(), "B": make()}
+        full = run_crash.market_state(stocks, bench)
+        part = run_crash.market_state({c: d.iloc[:250] for c, d in stocks.items()}, bench.iloc[:250])
+        pd.testing.assert_frame_equal(full.iloc[:250], part)
+        f_full, f_part = run_crash.filters(stocks["A"], full), run_crash.filters(stocks["A"].iloc[:250], part)
+        for name in f_full:
+            pd.testing.assert_series_equal(f_full[name].iloc[:250], f_part[name], check_names=False, obj=name)
+        below, above = f_full["0050 在 200 日線之下"], f_full["0050 在 200 日線之上"]
+        self.assertFalse((below & above).any(), "同一天不能既在線上又在線下")
+        self.assertTrue(below.iloc[210:].eq(~above.iloc[210:]).all())
+
+
 class NoLookAhead(unittest.TestCase):
     def test_signals_do_not_change_when_future_rows_are_appended(self):
         """每個策略：只給前 300 天算出來的訊號，要和給全部 400 天再取前 300 天的一模一樣。"""

@@ -25,6 +25,20 @@ import fubon_parse  # noqa: E402  記憶中樞 tw-branch-chips 技能的解析�
 FINMIND = "https://api.finmindtrade.com/api/v4/data?dataset={ds}&data_id={code}&start_date={start}"
 BRANCH_HOSTS = ["fubon-ebrokerdj.fbs.com.tw", "jdata.yuanta.com.tw", "justdata.moneydj.com"]
 BRANCH_PERIODS = {1: "1日", 2: "5日", 4: "20日", 6: "60日"}
+DAYTRADE_FILE = Path(__file__).resolve().parent / "twstock_lab" / "daytrade_branches.json"
+
+
+def daytrade_note(buys: list) -> str:
+    """買超榜上有沒有回測認定的隔日沖分點（run_daytrade.py 產生的名單）；沒有名單檔或沒上榜回空字串。"""
+    if not DAYTRADE_FILE.is_file():
+        return ""
+    flagged = json.loads(DAYTRADE_FILE.read_text(encoding="utf-8"))
+    total = sum(x["net"] for x in buys if x["net"] > 0)
+    hits = [x for x in buys if x["net"] > 0 and x["name"] in flagged]
+    if not hits or total <= 0:
+        return ""
+    share = sum(x["net"] for x in hits) / total
+    return f"⚠ 隔日沖分點在買超榜：{'、'.join(x['name'] for x in hits)}（佔前 15 名買超的 {share:.0%}；這些分點過去約六成隔天就賣）"
 INVESTORS = {"Foreign_Investor": "外資", "Investment_Trust": "投信", "Dealer_self": "自營(自行)",
              "Dealer_Hedging": "自營(避險)", "Foreign_Dealer_Self": "外資自營"}
 
@@ -162,6 +176,8 @@ def check(key: str) -> None:
         print(f"  {label}（{s['range_start']}～{s['range_end']}）前 15 名合計：買超 {sum(x['net'] for x in buys):+.0f}、賣超 {sum(x['net'] for x in sells):+.0f}")
         print("    買：" + "；".join(f"{x['name']} {x['net']:+.0f}" for x in buys[:8]))
         print("    賣：" + "；".join(f"{x['name']} {x['net']:+.0f}" for x in sells[:8]))
+        if n == 1 and daytrade_note(buys):
+            print("    " + daytrade_note(buys))
 
 
 if __name__ == "__main__":

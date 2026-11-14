@@ -146,6 +146,18 @@ class DayTradeBranches(unittest.TestCase):
         self.assertIsNone(dt.forward_return(frame([100, 110, 110, 110]), 0, 1), "隔天開盤漲停買不到")
 
 
+class DayTradeWarning(unittest.TestCase):
+    def test_stock_check_warns_only_when_a_listed_branch_is_a_top_buyer(self):
+        import json
+        import stock_check
+        listed = next(iter(json.loads(stock_check.DAYTRADE_FILE.read_text(encoding="utf-8"))))
+        note = stock_check.daytrade_note([{"name": listed, "net": 300.0}, {"name": "不在名單的分點", "net": 700.0}])
+        self.assertIn(listed, note)
+        self.assertIn("30%", note)
+        self.assertEqual(stock_check.daytrade_note([{"name": "不在名單的分點", "net": 700.0}]), "")
+        self.assertEqual(stock_check.daytrade_note([{"name": listed, "net": -50.0}]), "", "賣超的不算")
+
+
 class CrashFilters(unittest.TestCase):
     def test_market_state_and_filters_use_only_past_days(self):
         """大盤狀態與濾網：只給前 250 天算出來的，要和給全部 300 天再取前 250 天的一樣。"""

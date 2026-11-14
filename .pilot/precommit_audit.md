@@ -1,3 +1,15 @@
+# precommit audit（2026-11-14 隔日沖分點完整結果 + 個股體檢加警示）
+- 變更範圍：reports/DAYTRADE.md、daytrade.csv（1,200 頁抓齊後重跑）；twstock_lab/daytrade_branches.json（新，16 個分點的名單）；stock_check.py（daytrade_note：1 日買超榜上有名單裡的分點就印一行警示）；export_skill.sh（名單一起複製到全域技能）；tests（17 → 18）。
+- 呼叫鏈：run_daytrade.analyse → data/branch/daytrade_branches.json → 複製成 twstock_lab/daytrade_branches.json → stock_check.daytrade_note（只在 1 日排行那一段呼叫）。
+- 資料鏈檢查：
+  - ✔ 600 / 600 個事件都有當天與隔天的排行；認定期 229 個事件沒有變，16 個分點和初步結果相同。
+  - ✔ 警示只看買超為正的分點，佔比的分母是前 15 名買超合計，和 run_daytrade.daytrade_share 的算法一致。
+  - ✔ 沒有名單檔時 daytrade_note 回空字串，體檢照常印其他內容。
+  - ⚠ 名單是 2025-06-30 以前的資料認定的，是一份固定的檔案；分點行為會變，要更新得重跑 run_daytrade.py 再複製。
+  - ⚠ 警示文字寫「約六成隔天就賣」是檢驗期的整體比例（57.7%），不是個別分點的數字。
+- 驗證：tests 18 個全過；daytrade_note 用假資料試過上榜、沒上榜、只有賣超三種。
+- 未驗證：stock_check.py 沒有對真實股票重跑（要連網抓分點）；「避開隔日沖股票報酬比較好」沒有得到資料支持（見報告）。
+
 # precommit audit（2026-11-14 run_daytrade.py：抓取自帶時間預算，時間到自己收工可接續）
 - 變更範圍：run_daytrade.py 的 do_fetch 多一個 minutes 參數（預設 100），其他不動。
 - 資料鏈檢查：
